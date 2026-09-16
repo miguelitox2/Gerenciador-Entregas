@@ -1,0 +1,342 @@
+import { useState } from "react";
+import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  VStack,
+  Input,
+  Button,
+  Grid,
+  Container,
+} from "@chakra-ui/react";
+import { useNavigate } from "react-router-dom";
+
+export function Login() {
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email || !senha) {
+      setErro("Preencha o e-mail e a senha para continuar.");
+      return;
+    }
+
+    const tokenFingido = "jwt_token_exemplo_123456";
+    localStorage.setItem("@ControleEntregas:token", tokenFingido);
+    localStorage.setItem("@ControleEntregas:usuario", email);
+
+    navigate("/buscar");
+  };
+
+  return (
+    <Grid
+      minH="100vh"
+      templateColumns={{
+        base: "1fr",
+        lg: "minmax(360px, 1fr) minmax(420px, 0.85fr)",
+      }}
+      w="100vw"
+    >
+      <Flex
+        background="radial-gradient(700px 400px at 80% 0%, rgba(46,139,97,.35), transparent 60%), linear-gradient(160deg,#0E1B16 0%,#12281E 60%,#0E1B16 100%)"
+        color="#D9E7DF"
+        p={{ base: "32px 24px", lg: "52px 48px" }}
+        direction="column"
+        justify="space-between"
+        gap="40px"
+        position="relative"
+        overflow="hidden"
+      >
+        <Flex
+          align="center"
+          gap="10px"
+          color="#7FD3AA"
+          position="relative"
+          zIndex={1}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="26px"
+            height="26px"
+            style={{ flex: "0 0 auto" }}
+          >
+            <path
+              d="M4 19c0-6 4-11 10-12-1.5 3-1 5-3 7s-4 2-4 5z"
+              fill="currentColor"
+              opacity=".85"
+            />
+            <path
+              d="M4 19c3 0 5-1 7-3"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              fill="none"
+              strokeLinecap="round"
+            />
+          </svg>
+          <Box>
+            <Text
+              fontSize="12.5px"
+              fontWeight="600"
+              letterSpacing="0.02em"
+              lineHeight="1.15"
+            >
+              Controle de
+            </Text>
+            <Text fontSize="14px" fontWeight="600" letterSpacing="-0.01em">
+              Entregas
+            </Text>
+          </Box>
+        </Flex>
+
+        <Heading
+          fontSize="32px"
+          lineHeight="1.18"
+          fontWeight="600"
+          letterSpacing="-0.03em"
+          maxW="15ch"
+          m={0}
+          zIndex={1}
+        >
+          A ocorrência sai da rua e vira{" "}
+          <Text as="em" fontStyle="normal" color="#7FD3AA">
+            registro
+          </Text>{" "}
+          no mesmo minuto.
+        </Heading>
+
+        <VStack
+          as="ul"
+          align="stretch"
+          gap="14px"
+          m={0}
+          p={0}
+          listStyleType="none"
+          zIndex={1}
+        >
+          <Flex
+            as="li"
+            gap="12px"
+            align="baseline"
+            fontSize="13.5px"
+            color="#A9C2B6"
+          >
+            <Text
+              as="span"
+              fontFamily="mono"
+              fontSize="11px"
+              color="#7FD3AA"
+              letterSpacing="0.1em"
+            >
+              01
+            </Text>
+            <Box>
+              <Text
+                as="b"
+                display="block"
+                color="#EAF3EE"
+                fontWeight="600"
+                fontSize="14px"
+              >
+                Importe a planilha
+              </Text>
+              As notas do dia ficam disponíveis para todo o time.
+            </Box>
+          </Flex>
+          <Flex
+            as="li"
+            gap="12px"
+            align="baseline"
+            fontSize="13.5px"
+            color="#A9C2B6"
+          >
+            <Text
+              as="span"
+              fontFamily="mono"
+              fontSize="11px"
+              color="#7FD3AA"
+              letterSpacing="0.1em"
+            >
+              02
+            </Text>
+            <Box>
+              <Text
+                as="b"
+                display="block"
+                color="#EAF3EE"
+                fontWeight="600"
+                fontSize="14px"
+              >
+                Registre por item
+              </Text>
+              Devolução, quebra e valor calculados linha a linha.
+            </Box>
+          </Flex>
+          <Flex
+            as="li"
+            gap="12px"
+            align="baseline"
+            fontSize="13.5px"
+            color="#A9C2B6"
+          >
+            <Text
+              as="span"
+              fontFamily="mono"
+              fontSize="11px"
+              color="#7FD3AA"
+              letterSpacing="0.1em"
+            >
+              03
+            </Text>
+            <Box>
+              <Text
+                as="b"
+                display="block"
+                color="#EAF3EE"
+                fontWeight="600"
+                fontSize="14px"
+              >
+                Avise o vendedor
+              </Text>
+              O rascunho abre no Outlook já preenchido.
+            </Box>
+          </Flex>
+        </VStack>
+      </Flex>
+
+      <Flex
+        align="center"
+        justify="center"
+        p={{ base: "32px 20px", lg: "40px 32px" }}
+        bg="white"
+      >
+        <Container maxW="380px" w="100%" p={0}>
+          <form onSubmit={handleLogin}>
+            <Text
+              fontSize="11px"
+              fontWeight="700"
+              letterSpacing="0.14em"
+              textTransform="uppercase"
+              color="#1F6B4A"
+              mb="6px"
+            >
+              Acesso restrito
+            </Text>
+            <Heading
+              fontSize="25px"
+              fontWeight="600"
+              letterSpacing="-0.025em"
+              lineHeight="1.2"
+              mb="6px"
+            >
+              Entre para registrar as ocorrências do dia
+            </Heading>
+            <Text color="#4C5D55" fontSize="13.5px" mb="24px">
+              Use seu e-mail cadastrado. Não há autocadastro.
+            </Text>
+
+            {erro && (
+              <Box
+                bg="#FDEDEB"
+                color="#9E2A20"
+                p="10px"
+                borderRadius="8px"
+                fontSize="13px"
+                mb="16px"
+                border="1px solid #F2C9C4"
+              >
+                {erro}
+              </Box>
+            )}
+
+            <Box mb="16px">
+              <Text
+                as="label"
+                display="block"
+                fontSize="10.5px"
+                fontWeight="700"
+                letterSpacing="0.09em"
+                textTransform="uppercase"
+                color="#4C5D55"
+                mb="6px"
+              >
+                E-mail corporativo
+              </Text>
+              <Input
+                type="email"
+                placeholder="voce@empresa.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                h="44px"
+                fontSize="14px"
+                borderColor="#C3CFC2"
+                _focus={{
+                  borderColor: "#1F6B4A",
+                  boxShadow: "0 0 0 3px rgba(31,107,74,.14)",
+                }}
+              />
+            </Box>
+
+            <Box mb="24px">
+              <Text
+                as="label"
+                display="block"
+                fontSize="10.5px"
+                fontWeight="700"
+                letterSpacing="0.09em"
+                textTransform="uppercase"
+                color="#4C5D55"
+                mb="6px"
+              >
+                Senha
+              </Text>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                h="44px"
+                fontSize="14px"
+                borderColor="#C3CFC2"
+                _focus={{
+                  borderColor: "#1F6B4A",
+                  boxShadow: "0 0 0 3px rgba(31,107,74,.14)",
+                }}
+              />
+            </Box>
+
+            <Button
+              type="submit"
+              w="100%"
+              h="48px"
+              bg="#1F6B4A"
+              color="white"
+              fontWeight="600"
+              fontSize="14px"
+              borderRadius="8px"
+              _hover={{ bg: "#134936" }}
+            >
+              Entrar
+            </Button>
+
+            <Text
+              mt="28px"
+              pt="18px"
+              borderTop="1px solid"
+              borderColor="#DCE3DB"
+              fontSize="12px"
+              color="#4C5D55"
+            >
+              Ocorrências e retenções ficam registradas com o nome de quem as
+              criou.
+            </Text>
+          </form>
+        </Container>
+      </Flex>
+    </Grid>
+  );
+}
