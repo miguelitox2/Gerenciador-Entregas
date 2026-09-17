@@ -6,12 +6,38 @@ import {
   IconButton,
   useDisclosure,
 } from "@chakra-ui/react";
-import { NavLink, Outlet } from "react-router-dom";
-import { useAuth0 } from "@auth0/auth0-react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
 
 export function Layout() {
   const { open, onToggle, onClose } = useDisclosure();
-  const { user, logout } = useAuth0();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+
+  // Carrega os dados do usuário salvos no localStorage pelo login do Fastify
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Erro ao ler dados do usuário:", e);
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    // Remove o token e os dados do usuário do armazenamento local
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
 
   const userInitial = user?.name
     ? user.name.charAt(0).toUpperCase()
@@ -155,9 +181,7 @@ export function Layout() {
 
           <Box
             as="button"
-            onClick={() =>
-              logout({ logoutParams: { returnTo: window.location.origin } })
-            }
+            onClick={handleLogout}
             w="100%"
             py="8px"
             px="12px"

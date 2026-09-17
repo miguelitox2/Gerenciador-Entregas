@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { API_URL } from "../config/api";
 import {
   Box,
   Flex,
@@ -10,56 +11,62 @@ import {
   Badge,
   HStack,
   Card,
+  Spinner,
 } from "@chakra-ui/react";
 
-const notasFiscaisMock = [
-  {
-    id: "1",
-    nf: "48291",
-    cliente: "Supermercado Compre Bem Ltda",
-    cidade: "Campinas - SP",
-    data: "14/09/2026",
-    valor: "R$ 14.580,00",
-    status: "Entregue",
-  },
-  {
-    id: "2",
-    nf: "48292",
-    cliente: "Comercial Alimentos São José",
-    cidade: "Jundiaí - SP",
-    data: "14/09/2026",
-    valor: "R$ 8.920,50",
-    status: "Com Ocorrência",
-  },
-  {
-    id: "3",
-    nf: "48293",
-    cliente: "Atacadista Bom Preço S/A",
-    cidade: "Sorocaba - SP",
-    data: "13/09/2026",
-    valor: "R$ 32.100,00",
-    status: "Retido",
-  },
-  {
-    id: "4",
-    nf: "48294",
-    cliente: "Distribuidora Central Hortifrúti",
-    cidade: "Piracicaba - SP",
-    data: "13/09/2026",
-    valor: "R$ 5.430,00",
-    status: "Entregue",
-  },
-];
+interface NotaItem {
+  id: string;
+  codigo: string;
+  descricao: string;
+  quantidade: number;
+  valorTotal: number;
+}
+
+interface Nota {
+  numeroNf: string;
+  numeroNfOriginal: string;
+  placa?: string;
+  peso?: number;
+  valor?: number;
+  cliente?: string;
+  cidade?: string;
+  motorista?: string;
+  importadoEm: string;
+  itens?: NotaItem[];
+}
 
 export function Buscar() {
   const [termo, setTermo] = useState("");
+  const [notas, setNotas] = useState<Nota[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const notasFiltradas = notasFiscaisMock.filter(
-    (item) =>
-      item.nf.includes(termo) ||
-      item.cliente.toLowerCase().includes(termo.toLowerCase()) ||
-      item.cidade.toLowerCase().includes(termo.toLowerCase()),
-  );
+  // Busca as notas reais do backend Fastify ao carregar a página
+  useEffect(() => {
+    fetch(`${API_URL}/api/notas`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.notas) {
+          setNotas(data.notas);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar notas fiscais:", err);
+        setLoading(false);
+      });
+  }, []);
+
+  // Filtra as notas pelo termo digitado (NF, cliente ou cidade)
+  const notasFiltradas = notas.filter((item) => {
+    const search = termo.toLowerCase();
+    const nf = item.numeroNf?.toLowerCase() || "";
+    const cliente = item.cliente?.toLowerCase() || "";
+    const cidade = item.cidade?.toLowerCase() || "";
+
+    return (
+      nf.includes(search) || cliente.includes(search) || cidade.includes(search)
+    );
+  });
 
   return (
     <Box p={{ base: "20px", lg: "32px" }} maxW="1400px" mx="auto">
@@ -80,8 +87,8 @@ export function Buscar() {
             Busca de Notas Fiscais
           </Heading>
           <Text fontSize="13.5px" color="#5A6E63" mt="2px">
-            Consulte rapidamente o status das entregas e notas cadastradas no
-            sistema.
+            Consulte o status das entregas e notas importadas diretamente do
+            banco de dados.
           </Text>
         </Box>
       </Flex>
@@ -155,7 +162,7 @@ export function Buscar() {
                   fontSize="11px"
                   textTransform="uppercase"
                 >
-                  Data
+                  Data Importação
                 </Table.ColumnHeader>
                 <Table.ColumnHeader
                   color="#3A4D43"
@@ -187,80 +194,94 @@ export function Buscar() {
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {notasFiltradas.length > 0 ? (
-                notasFiltradas.map((item) => (
-                  <Table.Row key={item.id} _hover={{ bg: "#FAFCFA" }}>
-                    <Table.Cell
-                      fontVariantNumeric="tabular-nums"
-                      fontWeight="600"
-                      color="#1F6B4A"
-                    >
-                      #{item.nf}
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Text fontWeight="600" color="#12281E" fontSize="13.5px">
-                        {item.cliente}
-                      </Text>
-                      <Text fontSize="12px" color="#6E8277">
-                        {item.cidade}
-                      </Text>
-                    </Table.Cell>
-                    <Table.Cell
-                      fontVariantNumeric="tabular-nums"
-                      color="#4C5D55"
-                      fontSize="13px"
-                    >
-                      {item.data}
-                    </Table.Cell>
-                    <Table.Cell
-                      fontVariantNumeric="tabular-nums"
-                      fontWeight="600"
-                      textAlign="right"
-                      color="#12281E"
-                      fontSize="13px"
-                    >
-                      {item.valor}
-                    </Table.Cell>
-                    <Table.Cell textAlign="center">
-                      <Badge
-                        px="8px"
-                        py="3px"
-                        borderRadius="full"
-                        fontSize="11px"
+              {loading ? (
+                <Table.Row>
+                  <Table.Cell colSpan={6} textAlign="center" py="40px">
+                    <Spinner size="md" color="#1F6B4A" />
+                    <Text mt="2" fontSize="13px" color="#6E8277">
+                      Carregando notas do sistema...
+                    </Text>
+                  </Table.Cell>
+                </Table.Row>
+              ) : notasFiltradas.length > 0 ? (
+                notasFiltradas.map((item) => {
+                  const dataFormatada = new Date(
+                    item.importadoEm,
+                  ).toLocaleDateString("pt-BR");
+                  const valorFormatado = Number(item.valor || 0).toLocaleString(
+                    "pt-BR",
+                    {
+                      style: "currency",
+                      currency: "BRL",
+                    },
+                  );
+
+                  return (
+                    <Table.Row key={item.numeroNf} _hover={{ bg: "#FAFCFA" }}>
+                      <Table.Cell
+                        fontVariantNumeric="tabular-nums"
                         fontWeight="600"
-                        bg={
-                          item.status === "Entregue"
-                            ? "#E1F3EA"
-                            : item.status === "Com Ocorrência"
-                              ? "#FDF3E3"
-                              : "#FEECEB"
-                        }
-                        color={
-                          item.status === "Entregue"
-                            ? "#1B653B"
-                            : item.status === "Com Ocorrência"
-                              ? "#8C5A00"
-                              : "#A61C1C"
-                        }
+                        color="#1F6B4A"
                       >
-                        {item.status}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell textAlign="right">
-                      <HStack justify="flex-end" gap="8px">
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          borderColor="#C3CFC2"
-                          color="#1F6B4A"
-                          _hover={{ bg: "#EBF3EF" }}
+                        #{item.numeroNf}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text
+                          fontWeight="600"
+                          color="#12281E"
+                          fontSize="13.5px"
                         >
-                          Ver detalhes
-                        </Button>
-                      </HStack>
-                    </Table.Cell>
-                  </Table.Row>
-                ))
+                          {item.cliente || "Cliente não informado"}
+                        </Text>
+                        <Text fontSize="12px" color="#6E8277">
+                          {item.cidade || "Cidade não informada"}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell
+                        fontVariantNumeric="tabular-nums"
+                        color="#4C5D55"
+                        fontSize="13px"
+                      >
+                        {dataFormatada}
+                      </Table.Cell>
+                      <Table.Cell
+                        fontVariantNumeric="tabular-nums"
+                        fontWeight="600"
+                        textAlign="right"
+                        color="#12281E"
+                        fontSize="13px"
+                      >
+                        {valorFormatado}
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        <Badge
+                          px="8px"
+                          py="3px"
+                          borderRadius="full"
+                          fontSize="11px"
+                          fontWeight="600"
+                          bg="#E1F3EA"
+                          color="#1B653B"
+                        >
+                          Ativa
+                        </Badge>
+                      </Table.Cell>
+                      <Table.Cell textAlign="right">
+                        <HStack justify="flex-end" gap="8px">
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            borderColor="#C3CFC2"
+                            color="#1F6B4A"
+                            _hover={{ bg: "#EBF3EF" }}
+                          >
+                            Ver detalhes
+                          </Button>
+                        </HStack>
+                      </Table.Cell>
+                    </Table.Row>
+                  );
+                })
               ) : (
                 <Table.Row>
                   <Table.Cell
@@ -269,7 +290,7 @@ export function Buscar() {
                     py="40px"
                     color="#6E8277"
                   >
-                    Nenhuma nota fiscal encontrada para o termo pesquisado.
+                    Nenhuma nota fiscal encontrada no banco de dados.
                   </Table.Cell>
                 </Table.Row>
               )}

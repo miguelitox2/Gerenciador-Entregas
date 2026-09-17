@@ -11,26 +11,55 @@ import {
   Container,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../config/api";
 
 export function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErro("");
 
     if (!email || !senha) {
       setErro("Preencha o e-mail e a senha para continuar.");
       return;
     }
 
-    const tokenFingido = "jwt_token_exemplo_123456";
-    localStorage.setItem("@ControleEntregas:token", tokenFingido);
-    localStorage.setItem("@ControleEntregas:usuario", email);
+    setCarregando(true);
 
-    navigate("/buscar");
+    try {
+      const response = await fetch(`${API_URL}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password: senha,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        // Salva o token JWT real e o usuário retornados pelo Fastify
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        navigate("/buscar");
+      } else {
+        setErro(data.error || "E-mail ou senha inválidos.");
+      }
+    } catch (err) {
+      console.error("Erro ao realizar login:", err);
+      setErro("Falha ao conectar com o servidor Fastify.");
+    } finally {
+      setCarregando(false);
+    }
   };
 
   return (
@@ -236,7 +265,7 @@ export function Login() {
               Entre para registrar as ocorrências do dia
             </Heading>
             <Text color="#4C5D55" fontSize="13.5px" mb="24px">
-              Use seu e-mail cadastrado. Não há autocadastro.
+              Use seu e-mail corporativo cadastrado no banco.
             </Text>
 
             {erro && (
@@ -311,6 +340,7 @@ export function Login() {
 
             <Button
               type="submit"
+              disabled={carregando}
               w="100%"
               h="48px"
               bg="#1F6B4A"
@@ -319,8 +349,9 @@ export function Login() {
               fontSize="14px"
               borderRadius="8px"
               _hover={{ bg: "#134936" }}
+              _disabled={{ opacity: 0.6, cursor: "not-allowed" }}
             >
-              Entrar
+              {carregando ? "Autenticando..." : "Entrar"}
             </Button>
 
             <Text

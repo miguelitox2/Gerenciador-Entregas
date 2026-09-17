@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../config/api";
 import {
   Box,
   Flex,
@@ -42,25 +43,53 @@ const historicoImportacoesMock = [
 export function Importar() {
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const [sucesso, setSucesso] = useState(false);
+  const [sucessoMsg, setSucessoMsg] = useState("");
+  const [erroMsg, setErroMsg] = useState("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setArquivo(e.target.files[0]);
-      setSucesso(false);
+      setSucessoMsg("");
+      setErroMsg("");
     }
   };
 
-  const handleUpload = (e: React.FormEvent) => {
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!arquivo) return;
 
     setEnviando(true);
-    setTimeout(() => {
+    setSucessoMsg("");
+    setErroMsg("");
+
+    const formData = new FormData();
+    formData.append("file", arquivo);
+
+    try {
+      const response = await fetch(`${API_URL}/api/importar-planilha`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSucessoMsg(data.message || "Planilha importada com sucesso!");
+        setArquivo(null);
+        // Reseta o input file se necessário
+        const inputElement = document.getElementById(
+          "file-upload",
+        ) as HTMLInputElement;
+        if (inputElement) inputElement.value = "";
+      } else {
+        setErroMsg(data.error || "Erro ao importar a planilha.");
+      }
+    } catch (error) {
+      console.error("Erro na requisição:", error);
+      setErroMsg("Falha ao conectar com o servidor Fastify.");
+    } finally {
       setEnviando(false);
-      setSucesso(true);
-      setArquivo(null);
-    }, 1500);
+    }
   };
 
   return (
@@ -82,8 +111,8 @@ export function Importar() {
             Importação de Planilhas
           </Heading>
           <Text fontSize="13.5px" color="#5A6E63" mt="2px">
-            Carregue o arquivo `.xlsx` diário para disponibilizar as notas
-            fiscais para toda a operação.
+            Carregue o arquivo `.xlsx` diário para processar as notas fiscais no
+            banco Neon.
           </Text>
         </Box>
       </Flex>
@@ -112,6 +141,7 @@ export function Importar() {
                 Selecionar arquivo de notas (.xlsx)
               </Text>
               <Input
+                id="file-upload"
                 type="file"
                 accept=".xlsx, .xls"
                 onChange={handleFileChange}
@@ -127,7 +157,7 @@ export function Importar() {
               />
             </Box>
 
-            {sucesso && (
+            {sucessoMsg && (
               <Box
                 bg="#E1F3EA"
                 color="#1B653B"
@@ -137,8 +167,21 @@ export function Importar() {
                 border="1px solid #B8E4C8"
                 fontWeight="500"
               >
-                Planilha importada com sucesso! As notas já estão disponíveis na
-                tela de busca.
+                {sucessoMsg}
+              </Box>
+            )}
+
+            {erroMsg && (
+              <Box
+                bg="#FEECEB"
+                color="#A61C1C"
+                p="12px"
+                borderRadius="8px"
+                fontSize="13.5px"
+                border="1px solid #F8B4B0"
+                fontWeight="500"
+              >
+                {erroMsg}
               </Box>
             )}
 

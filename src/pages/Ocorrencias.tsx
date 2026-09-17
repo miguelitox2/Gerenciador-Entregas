@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -11,60 +11,63 @@ import {
   HStack,
   Card,
   SimpleGrid,
+  Spinner,
 } from "@chakra-ui/react";
+import { API_URL } from "../config/api";
 
-const ocorrenciasMock = [
-  {
-    id: "1",
-    nf: "48292",
-    cliente: "Comercial Alimentos São José",
-    tipo: "Devolução Parcial",
-    motivo: "Produto avariado no transporte",
-    valor: "R$ 1.250,00",
-    status: "Pendente",
-    data: "14/09/2026",
-  },
-  {
-    id: "2",
-    nf: "48293",
-    cliente: "Atacadista Bom Preço S/A",
-    tipo: "Quebra / Avaria",
-    motivo: "Caixas amassadas / vazamento",
-    valor: "R$ 3.400,00",
-    status: "Em Análise",
-    data: "13/09/2026",
-  },
-  {
-    id: "3",
-    nf: "48280",
-    cliente: "Supermercado Econômico Ltda",
-    tipo: "Falta de Carga",
-    motivo: "Divergência na conferência física",
-    valor: "R$ 890,00",
-    status: "Resolvido",
-    data: "12/09/2026",
-  },
-  {
-    id: "4",
-    nf: "48275",
-    cliente: "Mercearia da Vila",
-    tipo: "Recusa Total",
-    motivo: "Cliente fechado no momento da entrega",
-    valor: "R$ 2.150,00",
-    status: "Pendente",
-    data: "11/09/2026",
-  },
-];
+interface Ocorrencia {
+  id: string;
+  numeroNf: string;
+  cliente?: string;
+  motivo: string;
+  observacao?: string;
+  totalValor?: number;
+  criadoEm: string;
+}
 
 export function Ocorrencias() {
   const [termo, setTermo] = useState("");
+  const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const ocorrenciasFiltradas = ocorrenciasMock.filter(
-    (item) =>
-      item.nf.includes(termo) ||
-      item.cliente.toLowerCase().includes(termo.toLowerCase()) ||
-      item.tipo.toLowerCase().includes(termo.toLowerCase()),
+  // Busca as ocorrências reais do backend Fastify
+  useEffect(() => {
+    fetch(`${API_URL}/api/ocorrencias`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ocorrencias) {
+          setOcorrencias(data.ocorrencias);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar ocorrências:", err);
+        setLoading(false);
+      });
+  }, []);
+
+  // Filtra as ocorrências pelo termo digitado (NF, cliente ou motivo)
+  const ocorrenciasFiltradas = ocorrencias.filter((item) => {
+    const search = termo.toLowerCase();
+    const nf = item.numeroNf?.toLowerCase() || "";
+    const cliente = item.cliente?.toLowerCase() || "";
+    const motivo = item.motivo?.toLowerCase() || "";
+
+    return (
+      nf.includes(search) || cliente.includes(search) || motivo.includes(search)
+    );
+  });
+
+  // Cálculos dinâmicos baseados nos dados reais
+  const totalMes = ocorrencias.length;
+  const valorTotalAfetado = ocorrencias.reduce(
+    (acc, curr) => acc + (curr.totalValor || 0),
+    0,
   );
+  const valorFormatadoTotal = valorTotalAfetado.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 
   return (
     <Box p={{ base: "20px", lg: "32px" }} maxW="1400px" mx="auto">
@@ -126,9 +129,10 @@ export function Ocorrencias() {
             color="#12281E"
             fontVariantNumeric="tabular-nums"
           >
-            38 registros
+            {totalMes} registros
           </Text>
         </Card.Root>
+
         <Card.Root
           p="16px"
           borderRadius="10px"
@@ -152,9 +156,10 @@ export function Ocorrencias() {
             color="#8C5A00"
             fontVariantNumeric="tabular-nums"
           >
-            12 ocorrências
+            {totalMes} ocorrências
           </Text>
         </Card.Root>
+
         <Card.Root
           p="16px"
           borderRadius="10px"
@@ -178,9 +183,10 @@ export function Ocorrencias() {
             color="#12281E"
             fontVariantNumeric="tabular-nums"
           >
-            R$ 28.450,00
+            {valorFormatadoTotal}
           </Text>
         </Card.Root>
+
         <Card.Root
           p="16px"
           borderRadius="10px"
@@ -204,7 +210,7 @@ export function Ocorrencias() {
             color="#1F6B4A"
             fontVariantNumeric="tabular-nums"
           >
-            26 ocorrências
+            0 ocorrências
           </Text>
         </Card.Root>
       </SimpleGrid>
@@ -219,7 +225,7 @@ export function Ocorrencias() {
       >
         <Flex gap="12px" wrap="wrap">
           <Input
-            placeholder="Filtrar por número da NF, cliente ou tipo de ocorrência..."
+            placeholder="Filtrar por número da NF, cliente ou motivo..."
             value={termo}
             onChange={(e) => setTermo(e.target.value)}
             maxW="480px"
@@ -267,7 +273,7 @@ export function Ocorrencias() {
                   fontSize="11px"
                   textTransform="uppercase"
                 >
-                  Tipo
+                  Data
                 </Table.ColumnHeader>
                 <Table.ColumnHeader
                   color="#3A4D43"
@@ -299,84 +305,93 @@ export function Ocorrencias() {
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {ocorrenciasFiltradas.length > 0 ? (
-                ocorrenciasFiltradas.map((item) => (
-                  <Table.Row key={item.id} _hover={{ bg: "#FAFCFA" }}>
-                    <Table.Cell
-                      fontVariantNumeric="tabular-nums"
-                      fontWeight="600"
-                      color="#1F6B4A"
-                    >
-                      #{item.nf}
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Text fontWeight="600" color="#12281E" fontSize="13.5px">
-                        {item.cliente}
-                      </Text>
-                      <Text fontSize="12px" color="#6E8277">
-                        {item.motivo}
-                      </Text>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Badge
-                        variant="subtle"
-                        colorScheme="gray"
-                        fontSize="11px"
-                        px="6px"
-                        py="2px"
-                      >
-                        {item.tipo}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell
-                      fontVariantNumeric="tabular-nums"
-                      fontWeight="600"
-                      textAlign="right"
-                      color="#12281E"
-                      fontSize="13px"
-                    >
-                      {item.valor}
-                    </Table.Cell>
-                    <Table.Cell textAlign="center">
-                      <Badge
-                        px="8px"
-                        py="3px"
-                        borderRadius="full"
-                        fontSize="11px"
+              {loading ? (
+                <Table.Row>
+                  <Table.Cell colSpan={6} textAlign="center" py="40px">
+                    <Spinner size="md" color="#1F6B4A" />
+                    <Text mt="2" fontSize="13px" color="#6E8277">
+                      Carregando ocorrências do sistema...
+                    </Text>
+                  </Table.Cell>
+                </Table.Row>
+              ) : ocorrenciasFiltradas.length > 0 ? (
+                ocorrenciasFiltradas.map((item) => {
+                  const dataFormatada = new Date(
+                    item.criadoEm,
+                  ).toLocaleDateString("pt-BR");
+                  const valorFormatado = Number(
+                    item.totalValor || 0,
+                  ).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  });
+
+                  return (
+                    <Table.Row key={item.id} _hover={{ bg: "#FAFCFA" }}>
+                      <Table.Cell
+                        fontVariantNumeric="tabular-nums"
                         fontWeight="600"
-                        bg={
-                          item.status === "Resolvido"
-                            ? "#E1F3EA"
-                            : item.status === "Em Análise"
-                              ? "#FDF3E3"
-                              : "#FEECEB"
-                        }
-                        color={
-                          item.status === "Resolvido"
-                            ? "#1B653B"
-                            : item.status === "Em Análise"
-                              ? "#8C5A00"
-                              : "#A61C1C"
-                        }
+                        color="#1F6B4A"
                       >
-                        {item.status}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell textAlign="right">
-                      <HStack justify="flex-end" gap="8px">
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          borderColor="#C3CFC2"
-                          color="#1F6B4A"
-                          _hover={{ bg: "#EBF3EF" }}
+                        #{item.numeroNf}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text
+                          fontWeight="600"
+                          color="#12281E"
+                          fontSize="13.5px"
                         >
-                          Detalhes / Outlook
-                        </Button>
-                      </HStack>
-                    </Table.Cell>
-                  </Table.Row>
-                ))
+                          {item.cliente || "Cliente não informado"}
+                        </Text>
+                        <Text fontSize="12px" color="#6E8277">
+                          {item.motivo}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell
+                        fontVariantNumeric="tabular-nums"
+                        color="#4C5D55"
+                        fontSize="13px"
+                      >
+                        {dataFormatada}
+                      </Table.Cell>
+                      <Table.Cell
+                        fontVariantNumeric="tabular-nums"
+                        fontWeight="600"
+                        textAlign="right"
+                        color="#12281E"
+                        fontSize="13px"
+                      >
+                        {valorFormatado}
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        <Badge
+                          px="8px"
+                          py="3px"
+                          borderRadius="full"
+                          fontSize="11px"
+                          fontWeight="600"
+                          bg="#FDF3E3"
+                          color="#8C5A00"
+                        >
+                          Pendente
+                        </Badge>
+                      </Table.Cell>
+                      <Table.Cell textAlign="right">
+                        <HStack justify="flex-end" gap="8px">
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            borderColor="#C3CFC2"
+                            color="#1F6B4A"
+                            _hover={{ bg: "#EBF3EF" }}
+                          >
+                            Detalhes / Outlook
+                          </Button>
+                        </HStack>
+                      </Table.Cell>
+                    </Table.Row>
+                  );
+                })
               ) : (
                 <Table.Row>
                   <Table.Cell
@@ -385,7 +400,7 @@ export function Ocorrencias() {
                     py="40px"
                     color="#6E8277"
                   >
-                    Nenhuma ocorrência encontrada para o filtro informado.
+                    Nenhuma ocorrência encontrada no banco de dados.
                   </Table.Cell>
                 </Table.Row>
               )}

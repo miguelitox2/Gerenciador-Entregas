@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -11,50 +11,53 @@ import {
   HStack,
   Card,
   SimpleGrid,
+  Spinner,
 } from "@chakra-ui/react";
+import { API_URL } from "../config/api";
 
-const retencoesMock = [
-  {
-    id: "1",
-    placa: "ABC-1234",
-    motorista: "Carlos Silva",
-    cliente: "Atacadista Bom Preço S/A",
-    motivo: "Divergência na nota fiscal (Fiscal)",
-    tempo: "4h 20m",
-    status: "Crítico",
-    data: "15/09/2026",
-  },
-  {
-    id: "2",
-    placa: "XYZ-9876",
-    motorista: "Roberto Souza",
-    cliente: "Comercial Alimentos São José",
-    motivo: "Atraso na liberação da doca",
-    tempo: "2h 10m",
-    status: "Em Acompanhamento",
-    data: "15/09/2026",
-  },
-  {
-    id: "3",
-    placa: "DEF-5678",
-    motorista: "Marcos Oliveira",
-    cliente: "Supermercado Compre Bem Ltda",
-    motivo: "Conferência física divergente",
-    tempo: "1h 45m",
-    status: "Em Acompanhamento",
-    data: "14/09/2026",
-  },
-];
+interface RetencaoItem {
+  id: string;
+  placa: string;
+  motoristas?: string[];
+  vendedores?: string[];
+  motivo?: string;
+  quantidadeNfs: number;
+  totalValor: number;
+  criadoEm: string;
+}
 
 export function Retencao() {
   const [termo, setTermo] = useState("");
+  const [retencoes, setRetencoes] = useState<RetencaoItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const retencoesFiltradas = retencoesMock.filter(
-    (item) =>
-      item.placa.toLowerCase().includes(termo.toLowerCase()) ||
-      item.motorista.toLowerCase().includes(termo.toLowerCase()) ||
-      item.cliente.toLowerCase().includes(termo.toLowerCase()),
-  );
+  // Busca as retenções reais do backend Fastify
+  useEffect(() => {
+    fetch(`${API_URL}/api/retencoes`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.retencoes) {
+          setRetencoes(data.retencoes);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar retenções:", err);
+        setLoading(false);
+      });
+  }, []);
+
+  // Filtra as retenções pela placa ou motivo
+  const retencoesFiltradas = retencoes.filter((item) => {
+    const search = termo.toLowerCase();
+    const placa = item.placa?.toLowerCase() || "";
+    const motivo = item.motivo?.toLowerCase() || "";
+
+    return placa.includes(search) || motivo.includes(search);
+  });
+
+  // Métricas dinâmicas
+  const totalVeiculos = retencoes.length;
 
   return (
     <Box p={{ base: "20px", lg: "32px" }} maxW="1400px" mx="auto">
@@ -116,9 +119,10 @@ export function Retencao() {
             color="#8C5A00"
             fontVariantNumeric="tabular-nums"
           >
-            3 veículos
+            {totalVeiculos} veículos
           </Text>
         </Card.Root>
+
         <Card.Root
           p="16px"
           borderRadius="10px"
@@ -142,9 +146,10 @@ export function Retencao() {
             color="#12281E"
             fontVariantNumeric="tabular-nums"
           >
-            2h 45m
+            -
           </Text>
         </Card.Root>
+
         <Card.Root
           p="16px"
           borderRadius="10px"
@@ -168,7 +173,7 @@ export function Retencao() {
             color="#1F6B4A"
             fontVariantNumeric="tabular-nums"
           >
-            5 veículos
+            0 veículos
           </Text>
         </Card.Root>
       </SimpleGrid>
@@ -183,7 +188,7 @@ export function Retencao() {
       >
         <Flex gap="12px" wrap="wrap">
           <Input
-            placeholder="Filtrar por placa, motorista ou cliente..."
+            placeholder="Filtrar por placa ou motivo..."
             value={termo}
             onChange={(e) => setTermo(e.target.value)}
             maxW="480px"
@@ -215,7 +220,7 @@ export function Retencao() {
                   fontSize="11px"
                   textTransform="uppercase"
                 >
-                  Placa / Motorista
+                  Placa / NFs
                 </Table.ColumnHeader>
                 <Table.ColumnHeader
                   color="#3A4D43"
@@ -223,7 +228,7 @@ export function Retencao() {
                   fontSize="11px"
                   textTransform="uppercase"
                 >
-                  Cliente / Local
+                  Motoristas
                 </Table.ColumnHeader>
                 <Table.ColumnHeader
                   color="#3A4D43"
@@ -240,7 +245,7 @@ export function Retencao() {
                   textTransform="uppercase"
                   textAlign="center"
                 >
-                  Tempo Parado
+                  Qtd NFs
                 </Table.ColumnHeader>
                 <Table.ColumnHeader
                   color="#3A4D43"
@@ -263,7 +268,16 @@ export function Retencao() {
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {retencoesFiltradas.length > 0 ? (
+              {loading ? (
+                <Table.Row>
+                  <Table.Cell colSpan={6} textAlign="center" py="40px">
+                    <Spinner size="md" color="#1F6B4A" />
+                    <Text mt="2" fontSize="13px" color="#6E8277">
+                      Carregando retenções do sistema...
+                    </Text>
+                  </Table.Cell>
+                </Table.Row>
+              ) : retencoesFiltradas.length > 0 ? (
                 retencoesFiltradas.map((item) => (
                   <Table.Row key={item.id} _hover={{ bg: "#FAFCFA" }}>
                     <Table.Cell>
@@ -276,7 +290,7 @@ export function Retencao() {
                         {item.placa}
                       </Text>
                       <Text fontSize="12px" color="#6E8277">
-                        {item.motorista}
+                        Total NFs: {item.quantidadeNfs}
                       </Text>
                     </Table.Cell>
                     <Table.Cell
@@ -284,19 +298,19 @@ export function Retencao() {
                       color="#12281E"
                       fontSize="13.5px"
                     >
-                      {item.cliente}
+                      {item.motoristas?.join(", ") || "Não informado"}
                     </Table.Cell>
                     <Table.Cell color="#4C5D55" fontSize="13px">
-                      {item.motivo}
+                      {item.motivo || "Sem motivo especificado"}
                     </Table.Cell>
                     <Table.Cell
                       textAlign="center"
                       fontVariantNumeric="tabular-nums"
                       fontWeight="600"
-                      color="#8C5A00"
+                      color="#12281E"
                       fontSize="13px"
                     >
-                      {item.tempo}
+                      {item.quantidadeNfs}
                     </Table.Cell>
                     <Table.Cell textAlign="center">
                       <Badge
@@ -305,12 +319,10 @@ export function Retencao() {
                         borderRadius="full"
                         fontSize="11px"
                         fontWeight="600"
-                        bg={item.status === "Crítico" ? "#FEECEB" : "#FDF3E3"}
-                        color={
-                          item.status === "Crítico" ? "#A61C1C" : "#8C5A00"
-                        }
+                        bg="#FEECEB"
+                        color="#A61C1C"
                       >
-                        {item.status}
+                        Crítico
                       </Badge>
                     </Table.Cell>
                     <Table.Cell textAlign="right">
@@ -336,7 +348,7 @@ export function Retencao() {
                     py="40px"
                     color="#6E8277"
                   >
-                    Nenhum veículo retido encontrado para o filtro informado.
+                    Nenhum veículo retido encontrado no banco de dados.
                   </Table.Cell>
                 </Table.Row>
               )}

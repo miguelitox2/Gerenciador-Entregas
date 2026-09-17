@@ -7,7 +7,8 @@ import { Retencao } from "../pages/Retencao";
 import { Importar } from "../pages/Importar";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem("@ControleEntregas:token");
+  // Ajustado para ler a chave "token" salva pelo login do Fastify
+  const token = localStorage.getItem("token");
   return token ? <>{children}</> : <Navigate to="/" replace />;
 }
 
