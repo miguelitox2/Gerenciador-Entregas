@@ -1,18 +1,22 @@
-import { useState, useEffect } from "react";
-import { API_URL } from "../config/api";
+import { useEffect, useState } from "react";
 import {
+  Badge,
   Box,
+  Button,
+  Card,
   Flex,
   Heading,
-  Text,
-  Input,
-  Button,
-  Table,
-  Badge,
   HStack,
-  Card,
+  Input,
   Spinner,
+  Table,
+  Text,
 } from "@chakra-ui/react";
+import { API_URL } from "../config/api";
+
+/* =========================================================
+   TIPOS
+========================================================= */
 
 interface NotaItem {
   id: string;
@@ -35,137 +39,273 @@ interface Nota {
   itens?: NotaItem[];
 }
 
+/* =========================================================
+   CORES DO SISTEMA
+========================================================= */
+
+const COLORS = {
+  background: "#0F1115",
+
+  card: "#111318",
+  cardHover: "#1A1D24",
+
+  border: "#252932",
+  borderHover: "#353B47",
+
+  text: "#F1F5F9",
+  textSecondary: "#9CA3AF",
+  textMuted: "#6B7280",
+
+  blue: "#3B82F6",
+  blueHover: "#2563EB",
+  blueSoft: "rgba(59, 130, 246, 0.12)",
+
+  input: "#0F1115",
+  inputBorder: "#353B47",
+
+  statusBackground: "rgba(59, 130, 246, 0.12)",
+  statusText: "#60A5FA",
+};
+
+/* =========================================================
+   COMPONENTE
+========================================================= */
+
 export function Buscar() {
   const [termo, setTermo] = useState("");
   const [notas, setNotas] = useState<Nota[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Busca as notas reais do backend Fastify ao carregar a página
+  /* =======================================================
+     CARREGAR NOTAS
+  ======================================================= */
+
   useEffect(() => {
-    fetch(`${API_URL}/api/notas`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.notas) {
-          setNotas(data.notas);
+    async function carregarNotas() {
+      try {
+        setLoading(true);
+
+        const response = await fetch(`${API_URL}/api/notas`);
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Não foi possível carregar as notas.");
         }
+
+        setNotas(data.notas || []);
+      } catch (error) {
+        console.error("Erro ao buscar notas fiscais:", error);
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar notas fiscais:", err);
-        setLoading(false);
-      });
+      }
+    }
+
+    carregarNotas();
   }, []);
 
-  // Filtra as notas pelo termo digitado (NF, cliente ou cidade)
-  const notasFiltradas = notas.filter((item) => {
-    const search = termo.toLowerCase();
-    const nf = item.numeroNf?.toLowerCase() || "";
-    const cliente = item.cliente?.toLowerCase() || "";
-    const cidade = item.cidade?.toLowerCase() || "";
+  /* =======================================================
+     FILTRO
+  ======================================================= */
+
+  const termoBusca = termo.trim().toLowerCase();
+
+  const notasFiltradas = notas.filter((nota) => {
+    const numeroNf = nota.numeroNf?.toLowerCase() || "";
+
+    const cliente = nota.cliente?.toLowerCase() || "";
+
+    const cidade = nota.cidade?.toLowerCase() || "";
 
     return (
-      nf.includes(search) || cliente.includes(search) || cidade.includes(search)
+      numeroNf.includes(termoBusca) ||
+      cliente.includes(termoBusca) ||
+      cidade.includes(termoBusca)
     );
   });
 
+  /* =======================================================
+     FORMATAÇÕES
+  ======================================================= */
+
+  function formatarData(data: string) {
+    return new Date(data).toLocaleDateString("pt-BR");
+  }
+
+  function formatarValor(valor?: number) {
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
+
   return (
-    <Box p={{ base: "20px", lg: "32px" }} maxW="1400px" mx="auto">
-      <Flex
-        justify="space-between"
-        align="center"
-        mb="24px"
-        wrap="wrap"
-        gap="16px"
-      >
-        <Box>
-          <Heading
-            fontSize="22px"
-            fontWeight="600"
-            color="#12281E"
-            letterSpacing="-0.02em"
-          >
-            Busca de Notas Fiscais
-          </Heading>
-          <Text fontSize="13.5px" color="#5A6E63" mt="2px">
-            Consulte o status das entregas e notas importadas diretamente do
-            banco de dados.
-          </Text>
-        </Box>
-      </Flex>
+    <Box
+      minH="100%"
+      p={{ base: "20px", lg: "32px" }}
+      maxW="1400px"
+      mx="auto"
+      bg={COLORS.background}
+    >
+      {/* ===================================================
+          CABEÇALHO
+      =================================================== */}
+
+      <Box mb="24px">
+        <Heading
+          fontSize="22px"
+          fontWeight="600"
+          color={COLORS.text}
+          letterSpacing="-0.02em"
+        >
+          Busca de Notas Fiscais
+        </Heading>
+
+        <Text fontSize="13.5px" color={COLORS.textSecondary} mt="2px">
+          Consulte o status das entregas e notas importadas diretamente do banco
+          de dados.
+        </Text>
+      </Box>
+
+      {/* ===================================================
+          CAMPO DE PESQUISA
+      =================================================== */}
 
       <Card.Root
-        p="16px"
         mb="24px"
+        p="16px"
         borderRadius="10px"
         borderWidth="1px"
-        borderColor="#DCE3DB"
-        bg="white"
+        borderColor={COLORS.border}
+        bg={COLORS.card}
+        boxShadow="none"
       >
         <Flex gap="12px" wrap="wrap">
           <Input
             placeholder="Pesquisar por número da NF, cliente ou cidade..."
             value={termo}
-            onChange={(e) => setTermo(e.target.value)}
+            onChange={(event) => setTermo(event.target.value)}
             maxW="480px"
             h="42px"
             fontSize="13.5px"
-            borderColor="#C3CFC2"
+            color={COLORS.text}
+            bg={COLORS.input}
+            borderColor={COLORS.inputBorder}
+            _placeholder={{
+              color: COLORS.textMuted,
+            }}
+            _hover={{
+              borderColor: COLORS.borderHover,
+            }}
             _focus={{
-              borderColor: "#1F6B4A",
-              boxShadow: "0 0 0 3px rgba(31,107,74,.14)",
+              borderColor: COLORS.blue,
+              boxShadow: `0 0 0 3px ${COLORS.blueSoft}`,
             }}
           />
+
           <Button
             h="42px"
             px="20px"
-            bg="#1F6B4A"
+            bg={COLORS.blue}
             color="white"
             fontWeight="600"
             fontSize="13.5px"
-            _hover={{ bg: "#134936" }}
+            _hover={{
+              bg: COLORS.blueHover,
+            }}
           >
             Pesquisar
           </Button>
         </Flex>
       </Card.Root>
 
+      {/* ===================================================
+          TABELA
+      =================================================== */}
+
       <Card.Root
         borderRadius="10px"
         borderWidth="1px"
-        borderColor="#DCE3DB"
-        bg="white"
+        borderColor={COLORS.border}
+        bg={COLORS.card}
         overflow="hidden"
+        boxShadow="none"
       >
-        <Box overflowX="auto">
-          <Table.Root size="sm" variant="line">
-            <Table.Header bg="#F7F9F8">
+        <Box overflowX="auto" bg={COLORS.card}>
+          <Table.Root
+            size="sm"
+            variant="line"
+            bg={COLORS.card}
+            color={COLORS.text}
+            css={{
+              "& thead": {
+                backgroundColor: COLORS.cardHover,
+              },
+
+              "& tbody": {
+                backgroundColor: COLORS.card,
+              },
+
+              "& tr": {
+                backgroundColor: COLORS.card,
+              },
+
+              "& th": {
+                backgroundColor: COLORS.cardHover,
+                color: COLORS.textSecondary,
+                borderColor: COLORS.border,
+              },
+
+              "& td": {
+                backgroundColor: COLORS.card,
+                color: COLORS.text,
+                borderColor: COLORS.border,
+              },
+
+              "& tbody tr:hover": {
+                backgroundColor: COLORS.cardHover,
+              },
+
+              "& tbody tr:hover td": {
+                backgroundColor: COLORS.cardHover,
+              },
+            }}
+          >
+            {/* =================================================
+                CABEÇALHO DA TABELA
+            ================================================= */}
+
+            <Table.Header>
               <Table.Row>
                 <Table.ColumnHeader
-                  color="#3A4D43"
                   fontWeight="700"
                   fontSize="11px"
                   textTransform="uppercase"
                 >
                   NF
                 </Table.ColumnHeader>
+
                 <Table.ColumnHeader
-                  color="#3A4D43"
                   fontWeight="700"
                   fontSize="11px"
                   textTransform="uppercase"
                 >
                   Cliente / Destino
                 </Table.ColumnHeader>
+
                 <Table.ColumnHeader
-                  color="#3A4D43"
                   fontWeight="700"
                   fontSize="11px"
                   textTransform="uppercase"
                 >
                   Data Importação
                 </Table.ColumnHeader>
+
                 <Table.ColumnHeader
-                  color="#3A4D43"
                   fontWeight="700"
                   fontSize="11px"
                   textTransform="uppercase"
@@ -173,8 +313,8 @@ export function Buscar() {
                 >
                   Valor
                 </Table.ColumnHeader>
+
                 <Table.ColumnHeader
-                  color="#3A4D43"
                   fontWeight="700"
                   fontSize="11px"
                   textTransform="uppercase"
@@ -182,8 +322,8 @@ export function Buscar() {
                 >
                   Status
                 </Table.ColumnHeader>
+
                 <Table.ColumnHeader
-                  color="#3A4D43"
                   fontWeight="700"
                   fontSize="11px"
                   textTransform="uppercase"
@@ -193,66 +333,84 @@ export function Buscar() {
                 </Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
+
+            {/* =================================================
+                CORPO DA TABELA
+            ================================================= */}
+
             <Table.Body>
+              {/* Loading */}
+
               {loading ? (
                 <Table.Row>
                   <Table.Cell colSpan={6} textAlign="center" py="40px">
-                    <Spinner size="md" color="#1F6B4A" />
-                    <Text mt="2" fontSize="13px" color="#6E8277">
-                      Carregando notas do sistema...
-                    </Text>
+                    <Flex direction="column" align="center" gap="8px">
+                      <Spinner size="md" color={COLORS.blue} />
+
+                      <Text fontSize="13px" color={COLORS.textSecondary}>
+                        Carregando notas do sistema...
+                      </Text>
+                    </Flex>
                   </Table.Cell>
                 </Table.Row>
               ) : notasFiltradas.length > 0 ? (
                 notasFiltradas.map((item) => {
-                  const dataFormatada = new Date(
-                    item.importadoEm,
-                  ).toLocaleDateString("pt-BR");
-                  const valorFormatado = Number(item.valor || 0).toLocaleString(
-                    "pt-BR",
-                    {
-                      style: "currency",
-                      currency: "BRL",
-                    },
-                  );
+                  const dataFormatada = formatarData(item.importadoEm);
+
+                  const valorFormatado = formatarValor(item.valor);
 
                   return (
-                    <Table.Row key={item.numeroNf} _hover={{ bg: "#FAFCFA" }}>
+                    <Table.Row key={item.numeroNf}>
+                      {/* NF */}
+
                       <Table.Cell
                         fontVariantNumeric="tabular-nums"
                         fontWeight="600"
-                        color="#1F6B4A"
+                        color={COLORS.blue}
                       >
                         #{item.numeroNf}
                       </Table.Cell>
+
+                      {/* Cliente / Destino */}
+
                       <Table.Cell>
                         <Text
                           fontWeight="600"
-                          color="#12281E"
+                          color={COLORS.text}
                           fontSize="13.5px"
                         >
                           {item.cliente || "Cliente não informado"}
                         </Text>
-                        <Text fontSize="12px" color="#6E8277">
+
+                        <Text fontSize="12px" color={COLORS.textMuted}>
                           {item.cidade || "Cidade não informada"}
                         </Text>
                       </Table.Cell>
+
+                      {/* Data */}
+
                       <Table.Cell
                         fontVariantNumeric="tabular-nums"
-                        color="#4C5D55"
+                        color={COLORS.textSecondary}
                         fontSize="13px"
                       >
                         {dataFormatada}
                       </Table.Cell>
+
+                      {/* Valor */}
+
                       <Table.Cell
                         fontVariantNumeric="tabular-nums"
                         fontWeight="600"
                         textAlign="right"
-                        color="#12281E"
+                        color={COLORS.text}
                         fontSize="13px"
                       >
                         {valorFormatado}
                       </Table.Cell>
+
+                      {/* Status */}
+
                       <Table.Cell textAlign="center">
                         <Badge
                           px="8px"
@@ -260,20 +418,27 @@ export function Buscar() {
                           borderRadius="full"
                           fontSize="11px"
                           fontWeight="600"
-                          bg="#E1F3EA"
-                          color="#1B653B"
+                          bg={COLORS.statusBackground}
+                          color={COLORS.statusText}
                         >
                           Ativa
                         </Badge>
                       </Table.Cell>
+
+                      {/* Ações */}
+
                       <Table.Cell textAlign="right">
                         <HStack justify="flex-end" gap="8px">
                           <Button
                             size="xs"
                             variant="outline"
-                            borderColor="#C3CFC2"
-                            color="#1F6B4A"
-                            _hover={{ bg: "#EBF3EF" }}
+                            borderColor={COLORS.borderHover}
+                            color={COLORS.textSecondary}
+                            _hover={{
+                              bg: COLORS.cardHover,
+                              borderColor: "#4B5563",
+                              color: COLORS.text,
+                            }}
                           >
                             Ver detalhes
                           </Button>
@@ -283,14 +448,13 @@ export function Buscar() {
                   );
                 })
               ) : (
+                /* Nenhum resultado */
+
                 <Table.Row>
-                  <Table.Cell
-                    colSpan={6}
-                    textAlign="center"
-                    py="40px"
-                    color="#6E8277"
-                  >
-                    Nenhuma nota fiscal encontrada no banco de dados.
+                  <Table.Cell colSpan={6} textAlign="center" py="40px">
+                    <Text color={COLORS.textMuted} fontSize="13px">
+                      Nenhuma nota fiscal encontrada no banco de dados.
+                    </Text>
                   </Table.Cell>
                 </Table.Row>
               )}
