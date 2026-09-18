@@ -72,8 +72,8 @@ export function Login() {
       w="100vw"
     >
       <Flex
-        background="radial-gradient(700px 400px at 80% 0%, rgba(46,139,97,.35), transparent 60%), linear-gradient(160deg,#0E1B16 0%,#12281E 60%,#0E1B16 100%)"
-        color="#D9E7DF"
+        background="radial-gradient(700px 400px at 80% 0%, rgba(59,130,246,.18), transparent 60%), linear-gradient(160deg,#0B0D10 0%,#111318 60%,#0B0D10 100%)"
+        color="#F1F5F9"
         p={{ base: "32px 24px", lg: "52px 48px" }}
         direction="column"
         justify="space-between"
@@ -84,7 +84,7 @@ export function Login() {
         <Flex
           align="center"
           gap="10px"
-          color="#7FD3AA"
+          color="#60A5FA"
           position="relative"
           zIndex={1}
         >
@@ -132,7 +132,7 @@ export function Login() {
           zIndex={1}
         >
           A ocorrência sai da rua e vira{" "}
-          <Text as="em" fontStyle="normal" color="#7FD3AA">
+          <Text as="em" fontStyle="normal" color="#60A5FA">
             registro
           </Text>{" "}
           no mesmo minuto.
@@ -152,13 +152,13 @@ export function Login() {
             gap="12px"
             align="baseline"
             fontSize="13.5px"
-            color="#A9C2B6"
+            color="#94A3B8"
           >
             <Text
               as="span"
               fontFamily="mono"
               fontSize="11px"
-              color="#7FD3AA"
+              color="#60A5FA"
               letterSpacing="0.1em"
             >
               01
@@ -167,7 +167,7 @@ export function Login() {
               <Text
                 as="b"
                 display="block"
-                color="#EAF3EE"
+                color="#F8FAFC"
                 fontWeight="600"
                 fontSize="14px"
               >
@@ -181,13 +181,13 @@ export function Login() {
             gap="12px"
             align="baseline"
             fontSize="13.5px"
-            color="#A9C2B6"
+            color="#94A3B8"
           >
             <Text
               as="span"
               fontFamily="mono"
               fontSize="11px"
-              color="#7FD3AA"
+              color="#60A5FA"
               letterSpacing="0.1em"
             >
               02
@@ -196,7 +196,7 @@ export function Login() {
               <Text
                 as="b"
                 display="block"
-                color="#EAF3EE"
+                color="#F8FAFC"
                 fontWeight="600"
                 fontSize="14px"
               >
@@ -210,13 +210,13 @@ export function Login() {
             gap="12px"
             align="baseline"
             fontSize="13.5px"
-            color="#A9C2B6"
+            color="#94A3B8"
           >
             <Text
               as="span"
               fontFamily="mono"
               fontSize="11px"
-              color="#7FD3AA"
+              color="#60A5FA"
               letterSpacing="0.1em"
             >
               03
@@ -225,7 +225,7 @@ export function Login() {
               <Text
                 as="b"
                 display="block"
-                color="#EAF3EE"
+                color="#F8FAFC"
                 fontWeight="600"
                 fontSize="14px"
               >
@@ -241,7 +241,8 @@ export function Login() {
         align="center"
         justify="center"
         p={{ base: "32px 20px", lg: "40px 32px" }}
-        bg="white"
+        bg="#111318"
+        color="#F1F5F9"
       >
         <Container maxW="380px" w="100%" p={0}>
           <form onSubmit={handleLogin}>
@@ -250,12 +251,13 @@ export function Login() {
               fontWeight="700"
               letterSpacing="0.14em"
               textTransform="uppercase"
-              color="#1F6B4A"
+              color="#3B82F6"
               mb="6px"
             >
               Acesso restrito
             </Text>
             <Heading
+              color="#F8FAFC"
               fontSize="25px"
               fontWeight="600"
               letterSpacing="-0.025em"
@@ -264,14 +266,14 @@ export function Login() {
             >
               Entre para registrar as ocorrências do dia
             </Heading>
-            <Text color="#4C5D55" fontSize="13.5px" mb="24px">
+            <Text color="#A8B3C2" fontSize="13.5px" mb="24px">
               Use seu e-mail corporativo cadastrado no banco.
             </Text>
 
             {erro && (
               <Box
-                bg="#FDEDEB"
-                color="#9E2A20"
+                bg="rgba(239,68,68,.12)"
+                color="#F87171"
                 p="10px"
                 borderRadius="8px"
                 fontSize="13px"
@@ -290,7 +292,7 @@ export function Login() {
                 fontWeight="700"
                 letterSpacing="0.09em"
                 textTransform="uppercase"
-                color="#4C5D55"
+                color="#CBD5E1"
                 mb="6px"
               >
                 E-mail corporativo
@@ -302,10 +304,10 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 h="44px"
                 fontSize="14px"
-                borderColor="#C3CFC2"
+                borderColor="#353B47"
                 _focus={{
-                  borderColor: "#1F6B4A",
-                  boxShadow: "0 0 0 3px rgba(31,107,74,.14)",
+                  borderColor: "#3B82F6",
+                  boxShadow: "0 0 0 3px rgba(59,130,246,.14)",
                 }}
               />
             </Box>
@@ -318,7 +320,7 @@ export function Login() {
                 fontWeight="700"
                 letterSpacing="0.09em"
                 textTransform="uppercase"
-                color="#4C5D55"
+                color="#CBD5E1"
                 mb="6px"
               >
                 Senha
@@ -330,10 +332,10 @@ export function Login() {
                 onChange={(e) => setSenha(e.target.value)}
                 h="44px"
                 fontSize="14px"
-                borderColor="#C3CFC2"
+                borderColor="#353B47"
                 _focus={{
-                  borderColor: "#1F6B4A",
-                  boxShadow: "0 0 0 3px rgba(31,107,74,.14)",
+                  borderColor: "#3B82F6",
+                  boxShadow: "0 0 0 3px rgba(59,130,246,.14)",
                 }}
               />
             </Box>
@@ -343,12 +345,12 @@ export function Login() {
               disabled={carregando}
               w="100%"
               h="48px"
-              bg="#1F6B4A"
+              bg="#3B82F6"
               color="white"
               fontWeight="600"
               fontSize="14px"
               borderRadius="8px"
-              _hover={{ bg: "#134936" }}
+              _hover={{ bg: "#2563EB" }}
               _disabled={{ opacity: 0.6, cursor: "not-allowed" }}
             >
               {carregando ? "Autenticando..." : "Entrar"}
@@ -358,9 +360,9 @@ export function Login() {
               mt="28px"
               pt="18px"
               borderTop="1px solid"
-              borderColor="#DCE3DB"
+              borderColor="#252932"
               fontSize="12px"
-              color="#4C5D55"
+              color="#A8B3C2"
             >
               Ocorrências e retenções ficam registradas com o nome de quem as
               criou.
