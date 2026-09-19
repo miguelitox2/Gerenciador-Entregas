@@ -623,7 +623,7 @@ export function Importar() {
                       {/* Responsável */}
 
                       <Table.Cell color={COLORS.textSecondary} fontSize="13px">
-                        {item.responsavelEmail || item.responsavel}
+                        {item.responsavel}
                       </Table.Cell>
 
                       {/* Status */}
@@ -716,9 +716,7 @@ export function Importar() {
                       </Text>
                       <Text fontSize="12px" color={COLORS.textSecondary}>
                         {importacaoAnterior.volume.toLocaleString("pt-BR")}{" "}
-                        notas · Responsável:{" "}
-                        {importacaoAnterior.responsavelEmail ||
-                          importacaoAnterior.responsavel}
+                        notas · Responsável: {importacaoAnterior.responsavel}
                       </Text>
                     </Box>
                   )}
