@@ -8,6 +8,7 @@ import {
 } from "@chakra-ui/react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+
 import {
   Search,
   ClipboardList,
@@ -17,6 +18,7 @@ import {
   Menu,
   PackageCheck,
   LogOut,
+  ChevronRight,
 } from "lucide-react";
 
 /* =========================================================
@@ -30,25 +32,26 @@ interface User {
 }
 
 /* =========================================================
-   CONFIGURAÇÕES VISUAIS
+   CORES
 ========================================================= */
 
 const COLORS = {
   background: "#0F1115",
+
   sidebar: "#111318",
-  sidebarHover: "#1A1D24",
+  sidebarHover: "#181B21",
+  sidebarActive: "#191D25",
 
   border: "#252932",
-  borderHover: "#353B47",
+  borderSoft: "#20232A",
 
   text: "#F1F5F9",
-  textSecondary: "#9CA3AF",
-  textMuted: "#6B7280",
+  textSecondary: "#A1A8B3",
+  textMuted: "#69717E",
 
   blue: "#3B82F6",
-  blueHover: "#2563EB",
-  blueSoft: "rgba(59, 130, 246, 0.12)",
-  blueAvatar: "rgba(59, 130, 246, 0.14)",
+  blueSoft: "rgba(59, 130, 246, 0.10)",
+  blueAvatar: "rgba(59, 130, 246, 0.13)",
 };
 
 /* =========================================================
@@ -57,62 +60,38 @@ const COLORS = {
 
 const MENU_ITEMS = [
   {
+    section: "Operação",
     path: "/buscar",
     label: "Buscar NF",
-    sub: "Operação do dia",
     icon: Search,
   },
   {
+    section: "Operação",
     path: "/ocorrencias",
     label: "Ocorrências",
-    sub: "Painel e registros",
     icon: ClipboardList,
   },
   {
+    section: "Operação",
     path: "/retencao",
     label: "Retenção",
-    sub: "Veículo parado",
     icon: Truck,
   },
   {
+    section: "Gestão",
     path: "/importar",
     label: "Importar",
-    sub: "Base do dia (.xlsx)",
     icon: FileDown,
   },
   {
+    section: "Gestão",
     path: "/usuarios",
     label: "Usuários",
-    sub: "Gerenciar usuários",
     icon: Users,
   },
 ];
 
-/* =========================================================
-   ESTILO DOS LINKS
-========================================================= */
-
-const NAV_LINK_STYLE = ({
-  isActive,
-}: {
-  isActive: boolean;
-}): React.CSSProperties => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "12px",
-  padding: "11px 12px",
-  borderRadius: "8px",
-  textDecoration: "none",
-
-  backgroundColor: isActive ? COLORS.blueSoft : "transparent",
-
-  color: isActive ? COLORS.text : COLORS.textSecondary,
-
-  boxShadow: isActive ? `inset 2px 0 0 ${COLORS.blue}` : "none",
-
-  transition:
-    "background-color 0.18s ease, color 0.18s ease, transform 0.18s ease",
-});
+const MENU_SECTIONS = ["Operação", "Gestão"];
 
 /* =========================================================
    COMPONENTE
@@ -125,7 +104,7 @@ export function Layout() {
   const [user, setUser] = useState<User | null>(null);
 
   /* =======================================================
-     CARREGA USUÁRIO
+     CARREGAR USUÁRIO
   ======================================================= */
 
   useEffect(() => {
@@ -137,7 +116,6 @@ export function Layout() {
 
     try {
       const parsedUser = JSON.parse(storedUser);
-
       setUser(parsedUser);
     } catch (error) {
       console.error("Erro ao ler dados do usuário:", error);
@@ -148,12 +126,12 @@ export function Layout() {
      LOGOUT
   ======================================================= */
 
-  function handleLogout() {
+  const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
     navigate("/login");
-  }
+  };
 
   /* =======================================================
      INICIAL DO USUÁRIO
@@ -169,282 +147,413 @@ export function Layout() {
   ======================================================= */
 
   return (
-    <>
+    <Flex h="100vh" w="100%" overflow="hidden" bg={COLORS.background}>
       {/* ===================================================
-          ESTILOS DO MENU
+          OVERLAY MOBILE
       =================================================== */}
 
-      <style>
-        {`
-          .sidebar-nav-item {
-            transition:
-              background-color 0.18s ease,
-              color 0.18s ease,
-              transform 0.18s ease;
-          }
-
-          .sidebar-nav-item:hover {
-            background-color: ${COLORS.sidebarHover} !important;
-            color: ${COLORS.text} !important;
-            transform: translateX(2px);
-          }
-        `}
-      </style>
-
-      <Flex h="100vh" overflow="hidden" bg={COLORS.background}>
-        {/* =================================================
-            SIDEBAR
-        ================================================= */}
-
+      {open && (
         <Box
-          as="aside"
-          w="262px"
-          h="100vh"
-          bg={COLORS.sidebar}
-          color={COLORS.textSecondary}
-          position="sticky"
-          top={0}
-          display={{
-            base: open ? "flex" : "none",
-            md: "flex",
-          }}
-          flexDirection="column"
-          borderRight="1px solid"
-          borderColor={COLORS.border}
-          zIndex={60}
-          css={{
-            "@media (max-width: 900px)": {
-              position: "fixed",
-              left: 0,
-              top: 0,
-              transform: open ? "translateX(0)" : "translateX(-100%)",
-              transition: "transform 0.22s ease",
-            },
-          }}
-        >
-          {/* ===============================================
-              LOGO
-          =============================================== */}
+          display={{ base: "block", md: "none" }}
+          position="fixed"
+          inset={0}
+          zIndex={49}
+          bg="rgba(0, 0, 0, 0.55)"
+          backdropFilter="blur(2px)"
+          onClick={onClose}
+        />
+      )}
 
-          <Flex p="22px 22px 18px" align="center" gap="10px">
-            <Box
-              w="30px"
-              h="30px"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              color={COLORS.blue}
-              flex="0 0 auto"
-            >
-              <PackageCheck size={26} strokeWidth={1.7} />
-            </Box>
+      {/* ===================================================
+          SIDEBAR
+      =================================================== */}
 
-            <Box>
-              <Text
-                fontSize="12.5px"
-                fontWeight="600"
-                letterSpacing="0.02em"
-                lineHeight="1.15"
-                color={COLORS.textSecondary}
-              >
-                Controle de
-              </Text>
-
-              <Text
-                fontSize="14px"
-                fontWeight="600"
-                letterSpacing="-0.01em"
-                lineHeight="1.2"
-                color={COLORS.text}
-              >
-                Entregas
-              </Text>
-            </Box>
-          </Flex>
-
-          {/* ===============================================
-              NAVEGAÇÃO
-          =============================================== */}
-
-          <VStack as="nav" align="stretch" gap="2px" px="12px" py="6px">
-            {MENU_ITEMS.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={onClose}
-                  className="sidebar-nav-item"
-                  style={NAV_LINK_STYLE}
-                >
-                  {/* Ícone */}
-
-                  <Box
-                    w="20px"
-                    h="20px"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    flex="0 0 auto"
-                  >
-                    <Icon size={18} strokeWidth={1.8} />
-                  </Box>
-
-                  {/* Texto */}
-
-                  <Box lineHeight="1.25" minW={0}>
-                    <Text fontSize="14px" fontWeight="600" color="inherit">
-                      {item.label}
-                    </Text>
-
-                    <Text fontSize="11px" color="inherit" opacity={0.65}>
-                      {item.sub}
-                    </Text>
-                  </Box>
-                </NavLink>
-              );
-            })}
-          </VStack>
-
-          {/* ===============================================
-              USUÁRIO
-          =============================================== */}
-
-          <Box
-            mt="auto"
-            p="16px"
-            borderTop="1px solid"
-            borderColor={COLORS.border}
-          >
-            <Flex align="center" gap="11px" mb="12px">
-              {/* Avatar */}
-
-              <Flex
-                w="34px"
-                h="34px"
-                align="center"
-                justify="center"
-                borderRadius="9px"
-                bg={COLORS.blueAvatar}
-                color="#60A5FA"
-                fontWeight="700"
-                fontSize="14px"
-                flex="0 0 auto"
-              >
-                {userInitial}
-              </Flex>
-
-              {/* Informações */}
-
-              <Box minW={0} lineHeight="1.25">
-                <Text
-                  fontSize="13px"
-                  fontWeight="600"
-                  color={COLORS.text}
-                  truncate
-                >
-                  {user?.name || "Usuário"}
-                </Text>
-
-                <Text fontSize="11px" color={COLORS.textMuted} truncate>
-                  {user?.email || "operacao@empresa.com"}
-                </Text>
-              </Box>
-            </Flex>
-
-            {/* =============================================
-                LOGOUT
-            ============================================= */}
-
-            <Box
-              as="button"
-              onClick={handleLogout}
-              w="100%"
-              py="8px"
-              px="12px"
-              borderRadius="8px"
-              bg="transparent"
-              border="1px solid"
-              borderColor={COLORS.borderHover}
-              color={COLORS.textSecondary}
-              fontSize="12.5px"
-              fontWeight="600"
-              cursor="pointer"
-              transition="all 0.18s ease"
-              _hover={{
-                bg: COLORS.sidebarHover,
-                borderColor: "#4B5563",
-                color: COLORS.text,
-              }}
-            >
-              <Flex align="center" justify="center" gap="8px">
-                <LogOut size={16} strokeWidth={1.8} />
-
-                <Text as="span">Sair da conta</Text>
-              </Flex>
-            </Box>
-          </Box>
-        </Box>
-
+      <Box
+        as="aside"
+        position={{ base: "fixed", md: "relative" }}
+        left={0}
+        top={0}
+        zIndex={50}
+        w={{ base: "270px", md: "250px" }}
+        h="100vh"
+        flexShrink={0}
+        display="flex"
+        flexDirection="column"
+        bg={COLORS.sidebar}
+        color={COLORS.textSecondary}
+        borderRight="1px solid"
+        borderColor={COLORS.border}
+        transform={{
+          base: open ? "translateX(0)" : "translateX(-100%)",
+          md: "translateX(0)",
+        }}
+        transition="transform 0.22s ease"
+      >
         {/* =================================================
-            CONTEÚDO PRINCIPAL
+            BRAND
         ================================================= */}
 
         <Flex
-          flex="1"
-          direction="column"
-          overflowY="auto"
-          minW={0}
-          bg={COLORS.background}
+          h="72px"
+          px="20px"
+          align="center"
+          gap="11px"
+          flexShrink={0}
+          borderBottom="1px solid"
+          borderColor={COLORS.borderSoft}
         >
-          {/* ===============================================
-              HEADER MOBILE
-          =============================================== */}
-
           <Flex
-            as="header"
-            display={{
-              base: "flex",
-              md: "none",
-            }}
+            w="34px"
+            h="34px"
             align="center"
-            gap="12px"
-            p="10px 14px"
-            bg={COLORS.sidebar}
-            borderBottom="1px solid"
-            borderColor={COLORS.border}
-            position="sticky"
-            top={0}
-            zIndex={20}
+            justify="center"
+            flexShrink={0}
+            borderRadius="9px"
+            bg={COLORS.blueSoft}
+            color={COLORS.blue}
           >
-            <IconButton
-              aria-label="Abrir menu"
-              onClick={onToggle}
-              variant="ghost"
-              color={COLORS.textSecondary}
-              _hover={{
-                bg: COLORS.sidebarHover,
-                color: COLORS.text,
-              }}
-            >
-              <Menu size={20} />
-            </IconButton>
+            <PackageCheck size={19} strokeWidth={1.9} />
+          </Flex>
 
-            <Text fontWeight="600" color={COLORS.text}>
+          <Box lineHeight="1.1">
+            <Text
+              fontSize="11px"
+              fontWeight="600"
+              letterSpacing="0.04em"
+              color={COLORS.textMuted}
+              textTransform="uppercase"
+            >
+              Controle de
+            </Text>
+
+            <Text
+              mt="3px"
+              fontSize="15px"
+              fontWeight="650"
+              letterSpacing="-0.02em"
+              color={COLORS.text}
+            >
+              Entregas
+            </Text>
+          </Box>
+        </Flex>
+
+        {/* =================================================
+            NAVEGAÇÃO
+        ================================================= */}
+
+        <Box
+          as="nav"
+          flex="1"
+          overflowY="auto"
+          px="10px"
+          py="18px"
+          css={{
+            "&::-webkit-scrollbar": {
+              width: "4px",
+            },
+
+            "&::-webkit-scrollbar-thumb": {
+              background: COLORS.border,
+              borderRadius: "10px",
+            },
+          }}
+        >
+          {MENU_SECTIONS.map((section) => {
+            const items = MENU_ITEMS.filter((item) => item.section === section);
+
+            return (
+              <Box key={section} mb="22px">
+                {/* Título da seção */}
+
+                <Text
+                  px="11px"
+                  mb="7px"
+                  fontSize="9px"
+                  fontWeight="700"
+                  letterSpacing="0.12em"
+                  textTransform="uppercase"
+                  color={COLORS.textMuted}
+                >
+                  {section}
+                </Text>
+
+                {/* Itens */}
+
+                <VStack align="stretch" gap="2px">
+                  {items.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={onClose}
+                        style={{
+                          textDecoration: "none",
+                        }}
+                      >
+                        {({ isActive }) => (
+                          <Flex
+                            position="relative"
+                            align="center"
+                            gap="11px"
+                            w="100%"
+                            px="11px"
+                            py="10px"
+                            borderRadius="9px"
+                            bg={isActive ? COLORS.sidebarActive : "transparent"}
+                            color={
+                              isActive ? COLORS.text : COLORS.textSecondary
+                            }
+                            transition="all 0.18s ease"
+                            cursor="pointer"
+                            _hover={{
+                              bg: COLORS.sidebarHover,
+                              color: COLORS.text,
+                            }}
+                          >
+                            {/* Indicador ativo */}
+
+                            {isActive && (
+                              <Box
+                                position="absolute"
+                                left={0}
+                                top="7px"
+                                bottom="7px"
+                                w="2px"
+                                borderRadius="0 4px 4px 0"
+                                bg={COLORS.blue}
+                              />
+                            )}
+
+                            {/* Ícone */}
+
+                            <Flex
+                              w="30px"
+                              h="30px"
+                              align="center"
+                              justify="center"
+                              flexShrink={0}
+                              borderRadius="7px"
+                              bg={isActive ? COLORS.blueSoft : "transparent"}
+                              color={isActive ? COLORS.blue : COLORS.textMuted}
+                              transition="all 0.18s ease"
+                              className="menu-icon"
+                              _groupHover={{
+                                bg: COLORS.blueSoft,
+                                color: COLORS.blue,
+                              }}
+                            >
+                              <Icon
+                                size={17}
+                                strokeWidth={isActive ? 2 : 1.7}
+                              />
+                            </Flex>
+
+                            {/* Nome */}
+
+                            <Text
+                              flex="1"
+                              minW={0}
+                              fontSize="13px"
+                              fontWeight={isActive ? "600" : "500"}
+                              color="inherit"
+                              whiteSpace="nowrap"
+                              overflow="hidden"
+                              textOverflow="ellipsis"
+                            >
+                              {item.label}
+                            </Text>
+
+                            {/* Seta */}
+
+                            {isActive && (
+                              <ChevronRight
+                                size={14}
+                                strokeWidth={1.7}
+                                color={COLORS.textMuted}
+                              />
+                            )}
+                          </Flex>
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </VStack>
+              </Box>
+            );
+          })}
+        </Box>
+
+        {/* =================================================
+            USUÁRIO
+        ================================================= */}
+
+        <Box
+          px="12px"
+          py="12px"
+          flexShrink={0}
+          borderTop="1px solid"
+          borderColor={COLORS.borderSoft}
+        >
+          <Flex
+            align="center"
+            gap="10px"
+            p="9px"
+            borderRadius="9px"
+            bg={COLORS.sidebarHover}
+            border="1px solid"
+            borderColor={COLORS.borderSoft}
+          >
+            {/* Avatar */}
+
+            <Flex
+              w="32px"
+              h="32px"
+              align="center"
+              justify="center"
+              flexShrink={0}
+              borderRadius="8px"
+              bg={COLORS.blueAvatar}
+              color="#60A5FA"
+              fontSize="12px"
+              fontWeight="700"
+            >
+              {userInitial}
+            </Flex>
+
+            {/* Informações */}
+
+            <Box flex="1" minW={0} lineHeight="1.2">
+              <Text
+                fontSize="12px"
+                fontWeight="600"
+                color={COLORS.text}
+                whiteSpace="nowrap"
+                overflow="hidden"
+                textOverflow="ellipsis"
+              >
+                {user?.name || "Usuário"}
+              </Text>
+
+              <Text
+                mt="3px"
+                fontSize="10px"
+                color={COLORS.textMuted}
+                whiteSpace="nowrap"
+                overflow="hidden"
+                textOverflow="ellipsis"
+              >
+                {user?.email || "operacao@empresa.com"}
+              </Text>
+            </Box>
+          </Flex>
+
+          {/* Logout */}
+
+          <Box
+            as="button"
+            onClick={handleLogout}
+            w="100%"
+            mt="8px"
+            py="8px"
+            px="10px"
+            borderRadius="8px"
+            bg="transparent"
+            border="1px solid transparent"
+            color={COLORS.textMuted}
+            fontSize="11px"
+            fontWeight="600"
+            cursor="pointer"
+            transition="all 0.18s ease"
+            _hover={{
+              bg: COLORS.sidebarHover,
+              borderColor: COLORS.border,
+              color: COLORS.textSecondary,
+            }}
+          >
+            <Flex align="center" justify="center" gap="7px">
+              <LogOut size={14} strokeWidth={1.8} />
+
+              <Text as="span">Sair da conta</Text>
+            </Flex>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ===================================================
+          ÁREA PRINCIPAL
+      =================================================== */}
+
+      <Flex
+        flex="1"
+        minW={0}
+        direction="column"
+        overflow="hidden"
+        bg={COLORS.background}
+      >
+        {/* =================================================
+            HEADER MOBILE
+        ================================================= */}
+
+        <Flex
+          as="header"
+          display={{
+            base: "flex",
+            md: "none",
+          }}
+          h="58px"
+          flexShrink={0}
+          align="center"
+          px="12px"
+          gap="10px"
+          bg={COLORS.sidebar}
+          borderBottom="1px solid"
+          borderColor={COLORS.border}
+          zIndex={20}
+        >
+          <IconButton
+            aria-label="Abrir menu"
+            onClick={onToggle}
+            variant="ghost"
+            size="sm"
+            color={COLORS.textSecondary}
+            _hover={{
+              bg: COLORS.sidebarHover,
+              color: COLORS.text,
+            }}
+          >
+            <Menu size={19} />
+          </IconButton>
+
+          <Flex align="center" gap="8px">
+            <Flex
+              w="25px"
+              h="25px"
+              align="center"
+              justify="center"
+              borderRadius="7px"
+              bg={COLORS.blueSoft}
+              color={COLORS.blue}
+            >
+              <PackageCheck size={15} strokeWidth={1.9} />
+            </Flex>
+
+            <Text fontSize="13px" fontWeight="600" color={COLORS.text}>
               Controle de Entregas
             </Text>
           </Flex>
-
-          {/* ===============================================
-              PÁGINA
-          =============================================== */}
-
-          <Box as="main" flex="1">
-            <Outlet />
-          </Box>
         </Flex>
+
+        {/* =================================================
+            CONTEÚDO
+        ================================================= */}
+
+        <Box as="main" flex="1" minH={0} overflowY="auto" overflowX="hidden">
+          <Outlet />
+        </Box>
       </Flex>
-    </>
+    </Flex>
   );
 }

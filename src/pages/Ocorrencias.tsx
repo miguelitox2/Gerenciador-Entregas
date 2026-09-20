@@ -190,21 +190,6 @@ export function Ocorrencias() {
             operação.
           </Text>
         </Box>
-
-        <Button
-          h="42px"
-          px="16px"
-          bg={COLORS.blue}
-          color="white"
-          fontSize="13.5px"
-          fontWeight="600"
-          borderRadius="8px"
-          _hover={{
-            bg: COLORS.blueHover,
-          }}
-        >
-          + Nova Ocorrência
-        </Button>
       </Flex>
 
       {/* ===================================================

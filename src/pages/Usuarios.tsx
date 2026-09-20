@@ -16,7 +16,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 
-import { UserPlus, Users, X } from "lucide-react";
+import { UserPlus, Users, X, Mail, BriefcaseBusiness } from "lucide-react";
 
 import { API_URL } from "../config/api";
 
@@ -47,28 +47,29 @@ const COLORS = {
   background: "#0F1115",
 
   card: "#111318",
-  cardHover: "#1A1D24",
+  cardHover: "#181B21",
 
   border: "#252932",
-  borderHover: "#353B47",
+  borderSoft: "#20232A",
+  borderHover: "#343A46",
 
   text: "#F1F5F9",
-  textSecondary: "#9CA3AF",
-  textMuted: "#6B7280",
+  textSecondary: "#A1A8B3",
+  textMuted: "#69717E",
 
   blue: "#3B82F6",
   blueHover: "#2563EB",
-  blueSoft: "rgba(59, 130, 246, 0.12)",
+  blueSoft: "rgba(59, 130, 246, 0.10)",
 
   danger: "#F87171",
-  dangerSoft: "rgba(239, 68, 68, 0.12)",
+  dangerSoft: "rgba(239, 68, 68, 0.10)",
 
   input: "#0F1115",
   inputBorder: "#353B47",
 };
 
 /* =========================================================
-   FORMULÁRIO INICIAL
+   FORMULÁRIO
 ========================================================= */
 
 const initialForm: FormData = {
@@ -128,7 +129,7 @@ export default function Usuarios() {
   }
 
   /* =======================================================
-     ALTERAR FORMULÁRIO
+     FORMULÁRIO
   ======================================================= */
 
   function handleChange(field: keyof FormData, value: string) {
@@ -139,7 +140,7 @@ export default function Usuarios() {
   }
 
   /* =======================================================
-     ABRIR MODAL
+     MODAL
   ======================================================= */
 
   function abrirModal() {
@@ -149,14 +150,8 @@ export default function Usuarios() {
     setModalAberto(true);
   }
 
-  /* =======================================================
-     FECHAR MODAL
-  ======================================================= */
-
   function fecharModal() {
-    if (loading) {
-      return;
-    }
+    if (loading) return;
 
     setModalAberto(false);
     setForm(initialForm);
@@ -231,12 +226,14 @@ export default function Usuarios() {
   return (
     <Box
       minH="100%"
-      p={{ base: "20px", lg: "32px" }}
-      maxW="1400px"
-      mx="auto"
+      p={{
+        base: "20px",
+        md: "28px",
+        lg: "34px",
+      }}
       bg={COLORS.background}
     >
-      <Box maxW="1100px" mx="auto">
+      <Box maxW="1200px" mx="auto">
         {/* =================================================
             CABEÇALHO
         ================================================= */}
@@ -248,66 +245,103 @@ export default function Usuarios() {
           }}
           justify="space-between"
           gap="16px"
-          mb="24px"
+          mb="26px"
           direction={{
             base: "column",
-            md: "row",
+            sm: "row",
           }}
         >
           <Box>
             <Flex align="center" gap="10px">
-              <Box
-                w="36px"
-                h="36px"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
+              <Flex
+                w="34px"
+                h="34px"
+                align="center"
+                justify="center"
                 borderRadius="9px"
                 bg={COLORS.blueSoft}
                 color={COLORS.blue}
               >
-                <Users size={20} strokeWidth={1.8} />
-              </Box>
+                <Users size={18} strokeWidth={1.8} />
+              </Flex>
 
-              <Heading
-                fontSize="22px"
-                fontWeight="600"
-                color={COLORS.text}
-                letterSpacing="-0.02em"
-              >
-                Usuários cadastrados
-              </Heading>
+              <Box>
+                <Heading
+                  fontSize={{
+                    base: "19px",
+                    md: "21px",
+                  }}
+                  fontWeight="600"
+                  letterSpacing="-0.02em"
+                  color={COLORS.text}
+                >
+                  Usuários
+                </Heading>
+              </Box>
             </Flex>
 
-            <Text fontSize="13.5px" color={COLORS.textSecondary} mt="6px">
+            <Text mt="7px" fontSize="12.5px" color={COLORS.textMuted}>
               Gerencie os acessos ao sistema.
             </Text>
           </Box>
 
           <Button
-            h="42px"
-            px="16px"
+            h="40px"
+            px="14px"
             bg={COLORS.blue}
             color="white"
             borderRadius="8px"
-            fontSize="13.5px"
+            fontSize="12.5px"
             fontWeight="600"
             onClick={abrirModal}
             _hover={{
               bg: COLORS.blueHover,
+              transform: "translateY(-1px)",
             }}
+            transition="all 0.18s ease"
           >
-            <UserPlus size={17} strokeWidth={1.8} />
+            <UserPlus size={16} strokeWidth={1.8} />
             Novo usuário
           </Button>
         </Flex>
 
         {/* =================================================
-            LISTA DE USUÁRIOS
+            RESUMO
+        ================================================= */}
+
+        <Flex align="center" gap="8px" mb="12px">
+          <Text
+            fontSize="11px"
+            fontWeight="700"
+            color={COLORS.textMuted}
+            textTransform="uppercase"
+            letterSpacing="0.08em"
+          >
+            Usuários cadastrados
+          </Text>
+
+          <Flex
+            minW="24px"
+            h="20px"
+            px="6px"
+            align="center"
+            justify="center"
+            borderRadius="full"
+            bg={COLORS.blueSoft}
+            color={COLORS.blue}
+            fontSize="10px"
+            fontWeight="700"
+          >
+            {usuarios.length}
+          </Flex>
+        </Flex>
+
+        {/* =================================================
+            TABELA
         ================================================= */}
 
         <Card.Root
-          borderWidth="1px"
+          border="1px solid"
           borderColor={COLORS.border}
           borderRadius="10px"
           bg={COLORS.card}
@@ -317,7 +351,7 @@ export default function Usuarios() {
           <Card.Body p={0}>
             {carregandoUsuarios ? (
               <Flex minH="180px" align="center" justify="center">
-                <Text color={COLORS.textSecondary} fontSize="13px">
+                <Text color={COLORS.textMuted} fontSize="12.5px">
                   Carregando usuários...
                 </Text>
               </Flex>
@@ -327,13 +361,33 @@ export default function Usuarios() {
                 direction="column"
                 align="center"
                 justify="center"
-                gap="8px"
+                gap="10px"
               >
-                <Users size={24} strokeWidth={1.5} color={COLORS.textMuted} />
+                <Flex
+                  w="42px"
+                  h="42px"
+                  align="center"
+                  justify="center"
+                  borderRadius="10px"
+                  bg={COLORS.blueSoft}
+                  color={COLORS.textMuted}
+                >
+                  <Users size={20} strokeWidth={1.5} />
+                </Flex>
 
-                <Text color={COLORS.textSecondary} fontSize="13px">
-                  Nenhum usuário cadastrado.
-                </Text>
+                <Box textAlign="center">
+                  <Text
+                    color={COLORS.textSecondary}
+                    fontSize="13px"
+                    fontWeight="500"
+                  >
+                    Nenhum usuário cadastrado
+                  </Text>
+
+                  <Text mt="3px" color={COLORS.textMuted} fontSize="11px">
+                    Crie o primeiro usuário para começar.
+                  </Text>
+                </Box>
               </Flex>
             ) : (
               <Box
@@ -343,36 +397,24 @@ export default function Usuarios() {
                     backgroundColor: COLORS.card,
                   },
 
-                  "& thead": {
-                    backgroundColor: COLORS.cardHover,
-                  },
-
-                  "& tbody": {
-                    backgroundColor: COLORS.card,
-                  },
-
-                  "& tr": {
-                    backgroundColor: COLORS.card,
-                  },
-
                   "& th": {
-                    backgroundColor: COLORS.cardHover,
-                    color: COLORS.textSecondary,
+                    backgroundColor: COLORS.card,
+                    color: COLORS.textMuted,
                     borderColor: COLORS.border,
-                    fontSize: "11px",
+                    fontSize: "10px",
                     fontWeight: "700",
                     textTransform: "uppercase",
-                    letterSpacing: "0.04em",
+                    letterSpacing: "0.07em",
                   },
 
                   "& td": {
                     backgroundColor: COLORS.card,
                     color: COLORS.text,
-                    borderColor: COLORS.border,
+                    borderColor: COLORS.borderSoft,
                   },
 
-                  "& tbody tr:hover": {
-                    backgroundColor: COLORS.cardHover,
+                  "& tbody tr": {
+                    transition: "background-color 0.18s ease",
                   },
 
                   "& tbody tr:hover td": {
@@ -394,38 +436,74 @@ export default function Usuarios() {
                   <Table.Body>
                     {usuarios.map((usuario) => (
                       <Table.Row key={usuario.id}>
-                        <Table.Cell>
-                          <Text
-                            fontWeight="600"
-                            color={COLORS.text}
-                            fontSize="13.5px"
-                          >
-                            {usuario.name}
-                          </Text>
+                        {/* Nome */}
+
+                        <Table.Cell py="14px">
+                          <Flex align="center" gap="10px">
+                            <Flex
+                              w="30px"
+                              h="30px"
+                              align="center"
+                              justify="center"
+                              flexShrink={0}
+                              borderRadius="8px"
+                              bg={COLORS.blueSoft}
+                              color={COLORS.blue}
+                              fontSize="11px"
+                              fontWeight="700"
+                            >
+                              {usuario.name.charAt(0).toUpperCase()}
+                            </Flex>
+
+                            <Text
+                              fontSize="13px"
+                              fontWeight="600"
+                              color={COLORS.text}
+                            >
+                              {usuario.name}
+                            </Text>
+                          </Flex>
                         </Table.Cell>
+
+                        {/* Cargo */}
 
                         <Table.Cell>
                           <Box
                             as="span"
                             display="inline-flex"
                             alignItems="center"
-                            px="9px"
+                            gap="5px"
+                            px="8px"
                             py="4px"
                             borderRadius="full"
                             bg={COLORS.blueSoft}
                             color={COLORS.blue}
-                            fontSize="11px"
+                            fontSize="10px"
                             fontWeight="600"
                           >
+                            <BriefcaseBusiness size={11} strokeWidth={1.8} />
+
                             {usuario.cargo}
                           </Box>
                         </Table.Cell>
 
-                        <Table.Cell
-                          color={COLORS.textSecondary}
-                          fontSize="13px"
-                        >
-                          {usuario.email}
+                        {/* E-mail */}
+
+                        <Table.Cell>
+                          <Flex
+                            align="center"
+                            gap="7px"
+                            color={COLORS.textSecondary}
+                            fontSize="12px"
+                          >
+                            <Mail
+                              size={13}
+                              strokeWidth={1.7}
+                              color={COLORS.textMuted}
+                            />
+
+                            {usuario.email}
+                          </Flex>
                         </Table.Cell>
                       </Table.Row>
                     ))}
@@ -466,58 +544,51 @@ export default function Usuarios() {
               color={COLORS.text}
             >
               {/* =================================================
-                  CABEÇALHO DO MODAL
+                  HEADER
               ================================================= */}
 
               <Dialog.Header
-                px="24px"
-                pt="22px"
-                pb="18px"
+                px="22px"
+                pt="20px"
+                pb="17px"
                 borderBottom="1px solid"
                 borderColor={COLORS.border}
               >
-                <Box>
-                  <Flex align="center" gap="10px">
-                    <Box
-                      w="34px"
-                      h="34px"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      borderRadius="8px"
-                      bg={COLORS.blueSoft}
-                      color={COLORS.blue}
-                    >
-                      <UserPlus size={18} strokeWidth={1.8} />
-                    </Box>
-
-                    <Box>
-                      <Dialog.Title
-                        color={COLORS.text}
-                        fontSize="17px"
-                        fontWeight="600"
-                      >
-                        Criar novo usuário
-                      </Dialog.Title>
-
-                      <Text
-                        fontSize="12px"
-                        color={COLORS.textSecondary}
-                        mt="2px"
-                      >
-                        Informe os dados de acesso do novo usuário.
-                      </Text>
-                    </Box>
+                <Flex align="center" gap="10px">
+                  <Flex
+                    w="32px"
+                    h="32px"
+                    align="center"
+                    justify="center"
+                    borderRadius="8px"
+                    bg={COLORS.blueSoft}
+                    color={COLORS.blue}
+                  >
+                    <UserPlus size={17} strokeWidth={1.8} />
                   </Flex>
-                </Box>
+
+                  <Box>
+                    <Dialog.Title
+                      color={COLORS.text}
+                      fontSize="16px"
+                      fontWeight="600"
+                    >
+                      Criar novo usuário
+                    </Dialog.Title>
+
+                    <Text mt="2px" fontSize="11px" color={COLORS.textMuted}>
+                      Informe os dados de acesso.
+                    </Text>
+                  </Box>
+                </Flex>
 
                 <Dialog.CloseTrigger asChild>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    minW="32px"
-                    h="32px"
+                    minW="30px"
+                    h="30px"
                     p={0}
                     color={COLORS.textMuted}
                     _hover={{
@@ -525,24 +596,24 @@ export default function Usuarios() {
                       color: COLORS.text,
                     }}
                   >
-                    <X size={17} strokeWidth={1.8} />
+                    <X size={16} strokeWidth={1.8} />
                   </Button>
                 </Dialog.CloseTrigger>
               </Dialog.Header>
 
               {/* =================================================
-                  CORPO
+                  FORMULÁRIO
               ================================================= */}
 
-              <Dialog.Body px="24px" py="22px">
+              <Dialog.Body px="22px" py="20px">
                 <form id="form-criar-usuario" onSubmit={handleSubmit}>
-                  <Stack gap="18px">
+                  <Stack gap="16px">
                     {/* Nome */}
 
                     <Field.Root>
                       <Field.Label
                         color={COLORS.textSecondary}
-                        fontSize="12px"
+                        fontSize="11px"
                         fontWeight="600"
                         mb="6px"
                       >
@@ -555,7 +626,7 @@ export default function Usuarios() {
                           handleChange("nome", event.target.value)
                         }
                         placeholder="Digite o nome completo"
-                        size="lg"
+                        size="md"
                         borderRadius="8px"
                         color={COLORS.text}
                         bg={COLORS.input}
@@ -578,7 +649,7 @@ export default function Usuarios() {
                     <Field.Root>
                       <Field.Label
                         color={COLORS.textSecondary}
-                        fontSize="12px"
+                        fontSize="11px"
                         fontWeight="600"
                         mb="6px"
                       >
@@ -591,7 +662,7 @@ export default function Usuarios() {
                           handleChange("cargo", event.target.value)
                         }
                         placeholder="Ex.: Administrador"
-                        size="lg"
+                        size="md"
                         borderRadius="8px"
                         color={COLORS.text}
                         bg={COLORS.input}
@@ -614,7 +685,7 @@ export default function Usuarios() {
                     <Field.Root>
                       <Field.Label
                         color={COLORS.textSecondary}
-                        fontSize="12px"
+                        fontSize="11px"
                         fontWeight="600"
                         mb="6px"
                       >
@@ -628,7 +699,7 @@ export default function Usuarios() {
                           handleChange("email", event.target.value)
                         }
                         placeholder="usuario@empresa.com"
-                        size="lg"
+                        size="md"
                         borderRadius="8px"
                         color={COLORS.text}
                         bg={COLORS.input}
@@ -651,7 +722,7 @@ export default function Usuarios() {
                     <Field.Root>
                       <Field.Label
                         color={COLORS.textSecondary}
-                        fontSize="12px"
+                        fontSize="11px"
                         fontWeight="600"
                         mb="6px"
                       >
@@ -665,7 +736,7 @@ export default function Usuarios() {
                           handleChange("senha", event.target.value)
                         }
                         placeholder="Digite uma senha"
-                        size="lg"
+                        size="md"
                         borderRadius="8px"
                         color={COLORS.text}
                         bg={COLORS.input}
@@ -687,14 +758,14 @@ export default function Usuarios() {
 
                     {erro && (
                       <Box
-                        px="12px"
-                        py="10px"
+                        px="11px"
+                        py="9px"
                         borderRadius="8px"
                         bg={COLORS.dangerSoft}
                         border="1px solid"
-                        borderColor="rgba(239, 68, 68, 0.2)"
+                        borderColor="rgba(239, 68, 68, 0.18)"
                       >
-                        <Text color={COLORS.danger} fontSize="12.5px">
+                        <Text color={COLORS.danger} fontSize="11.5px">
                           {erro}
                         </Text>
                       </Box>
@@ -704,18 +775,14 @@ export default function Usuarios() {
 
                     {mensagem && (
                       <Box
-                        px="12px"
-                        py="10px"
+                        px="11px"
+                        py="9px"
                         borderRadius="8px"
                         bg={COLORS.blueSoft}
                         border="1px solid"
-                        borderColor="rgba(59, 130, 246, 0.2)"
+                        borderColor="rgba(59, 130, 246, 0.18)"
                       >
-                        <Text
-                          color={COLORS.blue}
-                          fontSize="12.5px"
-                          fontWeight="500"
-                        >
+                        <Text color={COLORS.blue} fontSize="11.5px">
                           {mensagem}
                         </Text>
                       </Box>
@@ -725,12 +792,12 @@ export default function Usuarios() {
               </Dialog.Body>
 
               {/* =================================================
-                  RODAPÉ
+                  FOOTER
               ================================================= */}
 
               <Dialog.Footer
-                px="24px"
-                py="18px"
+                px="22px"
+                py="16px"
                 borderTop="1px solid"
                 borderColor={COLORS.border}
               >
@@ -745,7 +812,7 @@ export default function Usuarios() {
                     onClick={fecharModal}
                     _hover={{
                       bg: COLORS.cardHover,
-                      borderColor: "#4B5563",
+                      borderColor: COLORS.borderHover,
                       color: COLORS.text,
                     }}
                   >
@@ -764,7 +831,7 @@ export default function Usuarios() {
                       bg: COLORS.blueHover,
                     }}
                   >
-                    <UserPlus size={16} strokeWidth={1.8} />
+                    <UserPlus size={15} strokeWidth={1.8} />
                     Criar usuário
                   </Button>
                 </HStack>
