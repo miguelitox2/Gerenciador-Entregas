@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   Calculator,
+  Check,
   CircleDollarSign,
+  Copy,
   ClipboardCheck,
   FileText,
   PackageCheck,
+  Mail,
   Search,
   Weight,
   X,
@@ -15,6 +18,7 @@ import {
 import { toast } from "sonner";
 
 import { API_URL } from "../config/api";
+import { gerarEmailOcorrencia } from "../templates/ocorrenciaEmails";
 
 import {
   Badge,
@@ -311,6 +315,11 @@ export function Buscar() {
   const [observacao, setObservacao] = useState("");
   const [salvando, setSalvando] = useState(false);
 
+  const [emailTemplate, setEmailTemplate] = useState("");
+  const [emailAssunto, setEmailAssunto] = useState("");
+  const [mostrarEmail, setMostrarEmail] = useState(false);
+  const [copiandoEmail, setCopiandoEmail] = useState(false);
+
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
 
@@ -561,8 +570,8 @@ export function Buscar() {
      REGISTRAR
   ========================================================= */
 
-  const registrarDevolucao = async () => {
-    if (!nota) return;
+  const validarOcorrencia = () => {
+    if (!nota) return false;
 
     if (exigePeso && tipoOcorrencia !== "total" && totalPesoDevolvido <= 0) {
       const mensagem =
@@ -572,7 +581,7 @@ export function Buscar() {
 
       toast.warning(mensagem);
 
-      return;
+      return false;
     }
 
     if (!observacao.trim()) {
@@ -585,32 +594,132 @@ export function Buscar() {
 
       toast.warning(mensagem);
 
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  const montarDadosOcorrencia = () => {
+    if (!nota) return null;
+
+    const user = getCurrentUser();
+
+    const itensDevolvidos = isLocalFechado
+      ? []
+      : itensCalculados
+          .filter((item) => item.pesoDevolvido > 0)
+          .map((item) => ({
+            id: item.id,
+            codigo: item.codigo,
+            descricao: item.descricao,
+            pesoOriginal: Number(item.pesoLiquido || 0),
+            pesoDevolvido: item.pesoDevolvido,
+            pesoLiquido: item.pesoDevolvido,
+            quantidade: item.quantidade,
+            valorUnitario: Number(item.valorUnitario || 0),
+            valorTotal: item.valorDevolucao,
+            valorDevolucao: item.valorDevolucao,
+          }));
+
+    const motivoOcorrencia: Record<TipoOcorrencia, string> = {
+      local_fechado: "Local fechado",
+      quebra_peso: "Quebra de peso",
+      parcial: "Devolução parcial",
+      total: "Devolução total",
+    };
+
+    return {
+      numeroNf: nota.numeroNf,
+      numeroNfOriginal: nota.numeroNfOriginal || nota.numeroNf,
+      motivo: motivoOcorrencia[tipoOcorrencia],
+      observacao: observacao.trim(),
+      unidade: nota.unidade || "kg",
+      itens: itensDevolvidos,
+      totalQtd: isLocalFechado ? 0 : itensDevolvidos.length,
+      totalPeso: isLocalFechado ? 0 : totalPesoDevolvido,
+      totalValor: isLocalFechado ? 0 : totalValorDevolucao,
+      valorNota: Number(nota.valor || 0),
+      pesoNota: Number(nota.peso || nota.pesoLiquido || 0),
+      cliente: nota.cliente,
+      vendedor: nota.vendedor,
+      criadoPor: user
+        ? { nome: user.name, email: user.email }
+        : { nome: "Sistema", email: "admin@sistema.com" },
+      criadoPorEmail: user?.email || "admin@sistema.com",
+      createdAt: new Date().toISOString(),
+      criadoEm: new Date().toISOString(),
+    };
+  };
+
+  const gerarOcorrencia = () => {
+    if (!validarOcorrencia()) return;
+
+    const ocorrencia = montarDadosOcorrencia();
+
+    if (!ocorrencia || !nota) return;
+
+    const html = gerarEmailOcorrencia(ocorrencia, nota);
+
+    setEmailTemplate(html);
+    setEmailAssunto(
+      `Ocorrência - NF ${nota.numeroNf} - ${getTipoLabel(tipoOcorrencia)}`,
+    );
+    setMostrarEmail(true);
+
+    toast.success("Template da ocorrência gerado.");
+  };
+
+  const copiarEmail = async () => {
+    if (!emailTemplate) return;
+
+    setCopiandoEmail(true);
+
     try {
-      const user = getCurrentUser();
+      const container = document.createElement("div");
+      container.innerHTML = emailTemplate;
 
-      const itensDevolvidos = isLocalFechado
-        ? []
-        : itensCalculados
-            .filter((item) => item.pesoDevolvido > 0)
-            .map((item) => ({
-              id: item.id,
-              codigo: item.codigo,
-              descricao: item.descricao,
-              pesoOriginal: Number(item.pesoLiquido || 0),
-              pesoDevolvido: item.pesoDevolvido,
-              valorUnitario: Number(item.valorUnitario || 0),
-              valorDevolucao: item.valorDevolucao,
-            }));
+      const textoPlano = container.textContent?.trim() || emailTemplate;
 
-      const motivoOcorrencia: Record<TipoOcorrencia, string> = {
-        local_fechado: "Local fechado",
-        quebra_peso: "Quebra de peso",
-        parcial: "Devolução parcial",
-        total: "Devolução total",
-      };
+      if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+        const htmlBlob = new Blob([emailTemplate], { type: "text/html" });
+        const textoBlob = new Blob([textoPlano], { type: "text/plain" });
+
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": htmlBlob,
+            "text/plain": textoBlob,
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(textoPlano);
+      }
+
+      toast.success("E-mail copiado. Agora é só colar no Outlook.");
+    } catch {
+      toast.error("Não foi possível copiar o e-mail.");
+    } finally {
+      setCopiandoEmail(false);
+    }
+  };
+
+  const fecharEmailModal = () => {
+    if (copiandoEmail) return;
+
+    setMostrarEmail(false);
+    setEmailTemplate("");
+    setEmailAssunto("");
+  };
+
+  const registrarOcorrencia = async () => {
+    if (!nota || !validarOcorrencia()) return;
+
+    try {
+      setSalvando(true);
+
+      const ocorrencia = montarDadosOcorrencia();
+
+      if (!ocorrencia) return;
 
       const response = await fetch(`${API_URL}/api/ocorrencias`, {
         method: "POST",
@@ -618,30 +727,7 @@ export function Buscar() {
           "Content-Type": "application/json",
           ...getAuthHeaders(),
         },
-        body: JSON.stringify({
-          numeroNf: nota.numeroNf,
-          motivo: motivoOcorrencia[tipoOcorrencia],
-          observacao: observacao.trim(),
-          unidade: nota.unidade || "kg",
-          itens: itensDevolvidos,
-          totalQtd: isLocalFechado ? 0 : itensDevolvidos.length,
-          totalPeso: isLocalFechado ? 0 : totalPesoDevolvido,
-          totalValor: isLocalFechado ? 0 : totalValorDevolucao,
-          valorNota: Number(nota.valor || 0),
-          pesoNota: Number(nota.peso || nota.pesoLiquido || 0),
-
-          criadoPor: user
-            ? {
-                nome: user.name,
-                email: user.email,
-              }
-            : {
-                nome: "Sistema",
-                email: "admin@sistema.com",
-              },
-
-          criadoPorEmail: user?.email || "admin@sistema.com",
-        }),
+        body: JSON.stringify(ocorrencia),
       });
 
       const data = await response.json();
@@ -663,8 +749,10 @@ export function Buscar() {
         {
           id: data.ocorrencia?.id || crypto.randomUUID(),
           numeroNf: nota.numeroNf,
-          totalPeso: isLocalFechado ? 0 : totalPesoDevolvido,
-          totalValor: isLocalFechado ? 0 : totalValorDevolucao,
+          totalPeso: ocorrencia.totalPeso,
+          totalValor: ocorrencia.totalValor,
+          valorNota: ocorrencia.valorNota,
+          pesoNota: ocorrencia.pesoNota,
           dataRef: new Date().toISOString(),
         },
       ]);
@@ -1528,9 +1616,27 @@ export function Buscar() {
               </Button>
 
               <Button
+                variant="outline"
+                borderColor="rgba(167,139,250,.35)"
+                color={COLORS.purple}
+                onClick={gerarOcorrencia}
+                disabled={salvando || copiandoEmail}
+                h="34px"
+                px="15px"
+                fontSize="11px"
+                _hover={{
+                  bg: COLORS.purpleSoft,
+                  borderColor: COLORS.purple,
+                }}
+              >
+                <Mail size={14} />
+                Gerar ocorrência
+              </Button>
+
+              <Button
                 bg={COLORS.blue}
                 color="white"
-                onClick={registrarDevolucao}
+                onClick={registrarOcorrencia}
                 loading={salvando}
                 h="34px"
                 px="16px"
@@ -1540,6 +1646,166 @@ export function Buscar() {
                 }}
               >
                 {getBotaoLabel(tipoOcorrencia)}
+              </Button>
+            </Flex>
+          </Box>
+        </Box>
+      )}
+
+      {/* =====================================================
+          MODAL DO E-MAIL
+      ===================================================== */}
+
+      {mostrarEmail && emailTemplate && (
+        <Box
+          position="fixed"
+          inset="0"
+          zIndex={1100}
+          bg="rgba(0,0,0,.78)"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={{ base: "8px", md: "16px" }}
+          onClick={fecharEmailModal}
+        >
+          <Box
+            width="100%"
+            maxW="1000px"
+            height={{ base: "94vh", lg: "90vh" }}
+            display="flex"
+            flexDirection="column"
+            overflow="hidden"
+            bg={COLORS.card}
+            border="1px solid"
+            borderColor={COLORS.borderHover}
+            borderRadius="10px"
+            boxShadow="0 24px 80px rgba(0,0,0,.5)"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Flex
+              px={{ base: "16px", lg: "20px" }}
+              py="13px"
+              borderBottom="1px solid"
+              borderColor={COLORS.border}
+              justify="space-between"
+              align="center"
+              flexShrink={0}
+            >
+              <Box>
+                <HStack gap="8px">
+                  <Mail size={17} color={COLORS.purple} />
+                  <Heading fontSize="17px" fontWeight="650">
+                    Ocorrência gerada
+                  </Heading>
+                </HStack>
+
+                <Text color={COLORS.secondary} fontSize="11px" mt="3px">
+                  Revise o modelo e copie para o Outlook. As fotos podem ser
+                  anexadas manualmente depois.
+                </Text>
+              </Box>
+
+              <Button
+                variant="ghost"
+                onClick={fecharEmailModal}
+                minW="32px"
+                w="32px"
+                h="32px"
+                p="0"
+                color={COLORS.secondary}
+                _hover={{
+                  bg: "rgba(255,255,255,.05)",
+                  color: COLORS.text,
+                }}
+              >
+                <X size={18} />
+              </Button>
+            </Flex>
+
+            <Box px={{ base: "14px", md: "18px" }} py="12px" flexShrink={0}>
+              <Text
+                fontSize="9px"
+                color={COLORS.secondary}
+                fontWeight="700"
+                letterSpacing=".08em"
+                mb="5px"
+              >
+                ASSUNTO
+              </Text>
+
+              <Input
+                value={emailAssunto}
+                onChange={(e) => setEmailAssunto(e.target.value)}
+                bg={COLORS.bg}
+                borderColor={COLORS.borderHover}
+                color={COLORS.text}
+                h="36px"
+                fontSize="11px"
+              />
+            </Box>
+
+            <Box
+              flex="1"
+              minH="0"
+              mx={{ base: "14px", md: "18px" }}
+              mb="12px"
+              border="1px solid"
+              borderColor={COLORS.border}
+              borderRadius="6px"
+              overflow="hidden"
+              bg="white"
+            >
+              <iframe
+                title="Pré-visualização da ocorrência"
+                srcDoc={emailTemplate}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  border: "0",
+                  background: "#ffffff",
+                }}
+              />
+            </Box>
+
+            <Flex
+              px={{ base: "16px", lg: "20px" }}
+              py="11px"
+              borderTop="1px solid"
+              borderColor={COLORS.border}
+              justify="flex-end"
+              gap="8px"
+              flexShrink={0}
+            >
+              <Button
+                variant="outline"
+                borderColor={COLORS.borderHover}
+                color={COLORS.text}
+                onClick={fecharEmailModal}
+                h="34px"
+                px="14px"
+                fontSize="11px"
+                _hover={{
+                  bg: COLORS.cardHover,
+                }}
+              >
+                Fechar
+              </Button>
+
+              <Button
+                bg={COLORS.purple}
+                color="#111318"
+                onClick={copiarEmail}
+                loading={copiandoEmail}
+                h="34px"
+                px="16px"
+                fontSize="11px"
+                fontWeight="700"
+                _hover={{
+                  bg: "#8B5CF6",
+                }}
+              >
+                {copiandoEmail ? <Check size={14} /> : <Copy size={14} />}
+                {copiandoEmail ? "Copiando..." : "Copiar e-mail"}
               </Button>
             </Flex>
           </Box>
