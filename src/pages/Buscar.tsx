@@ -73,9 +73,16 @@ interface Ocorrencia {
   pesoNota?: number | null;
   dataRef?: string | null;
   createdAt?: string | null;
+  motivo?: string | null;
+  status?: string | null;
 }
 
-type TipoOcorrencia = "local_fechado" | "quebra_peso" | "parcial" | "total";
+type TipoOcorrencia =
+  | "local_fechado"
+  | "quebra_peso"
+  | "parcial"
+  | "total"
+  | "reentrega";
 
 /* =========================================================
    CORES
@@ -164,26 +171,26 @@ function isCurrentMonth(dateValue?: string | null) {
   );
 }
 
-function getTipoLabel(tipo: TipoOcorrencia) {
-  const labels: Record<TipoOcorrencia, string> = {
-    local_fechado: "Local fechado",
-    quebra_peso: "Quebra de peso",
-    parcial: "Devolução parcial",
-    total: "Devolução total",
-  };
+const TIPO_OCORRENCIA = {
+  local_fechado: {
+    label: "Local fechado",
+    buttonLabel: "Registrar ocorrência",
+  },
+  quebra_peso: {
+    label: "Quebra de peso",
+    buttonLabel: "Registrar quebra de peso",
+  },
+  parcial: { label: "Devolução parcial", buttonLabel: "Registrar devolução" },
+  total: { label: "Devolução total", buttonLabel: "Registrar devolução" },
+  reentrega: { label: "Reentrega", buttonLabel: "Registrar reentrega" },
+} as const;
 
-  return labels[tipo];
+function getTipoLabel(tipo: TipoOcorrencia) {
+  return TIPO_OCORRENCIA[tipo].label;
 }
 
 function getBotaoLabel(tipo: TipoOcorrencia) {
-  const labels: Record<TipoOcorrencia, string> = {
-    local_fechado: "Registrar ocorrência",
-    quebra_peso: "Registrar quebra de peso",
-    parcial: "Registrar devolução",
-    total: "Registrar devolução",
-  };
-
-  return labels[tipo];
+  return TIPO_OCORRENCIA[tipo].buttonLabel;
 }
 
 /* =========================================================
@@ -329,6 +336,7 @@ export function Buscar() {
     tipoOcorrencia === "total";
 
   const isLocalFechado = tipoOcorrencia === "local_fechado";
+  const isReentrega = tipoOcorrencia === "reentrega";
 
   /* =========================================================
      DASHBOARD
@@ -507,7 +515,7 @@ export function Buscar() {
   const selecionarTipo = (value: TipoOcorrencia) => {
     setTipoOcorrencia(value);
 
-    if (value === "local_fechado") {
+    if (value === "local_fechado" || value === "reentrega") {
       setItens((current) =>
         current.map((item) => ({
           ...item,
@@ -588,9 +596,11 @@ export function Buscar() {
       const mensagem =
         tipoOcorrencia === "local_fechado"
           ? "Informe o motivo do local fechado."
-          : tipoOcorrencia === "quebra_peso"
-            ? "Informe a observação da quebra de peso."
-            : "Informe a observação/motivo da devolução.";
+          : tipoOcorrencia === "reentrega"
+            ? "Informe a observação da reentrega."
+            : tipoOcorrencia === "quebra_peso"
+              ? "Informe a observação da quebra de peso."
+              : "Informe a observação/motivo da devolução.";
 
       toast.warning(mensagem);
 
@@ -605,28 +615,30 @@ export function Buscar() {
 
     const user = getCurrentUser();
 
-    const itensDevolvidos = isLocalFechado
-      ? []
-      : itensCalculados
-          .filter((item) => item.pesoDevolvido > 0)
-          .map((item) => ({
-            id: item.id,
-            codigo: item.codigo,
-            descricao: item.descricao,
-            pesoOriginal: Number(item.pesoLiquido || 0),
-            pesoDevolvido: item.pesoDevolvido,
-            pesoLiquido: item.pesoDevolvido,
-            quantidade: item.quantidade,
-            valorUnitario: Number(item.valorUnitario || 0),
-            valorTotal: item.valorDevolucao,
-            valorDevolucao: item.valorDevolucao,
-          }));
+    const itensDevolvidos =
+      isLocalFechado || isReentrega
+        ? []
+        : itensCalculados
+            .filter((item) => item.pesoDevolvido > 0)
+            .map((item) => ({
+              id: item.id,
+              codigo: item.codigo,
+              descricao: item.descricao,
+              pesoOriginal: Number(item.pesoLiquido || 0),
+              pesoDevolvido: item.pesoDevolvido,
+              pesoLiquido: item.pesoDevolvido,
+              quantidade: item.quantidade,
+              valorUnitario: Number(item.valorUnitario || 0),
+              valorTotal: item.valorDevolucao,
+              valorDevolucao: item.valorDevolucao,
+            }));
 
     const motivoOcorrencia: Record<TipoOcorrencia, string> = {
       local_fechado: "Local fechado",
       quebra_peso: "Quebra de peso",
       parcial: "Devolução parcial",
       total: "Devolução total",
+      reentrega: "Reentrega",
     };
 
     return {
@@ -636,9 +648,9 @@ export function Buscar() {
       observacao: observacao.trim(),
       unidade: nota.unidade || "kg",
       itens: itensDevolvidos,
-      totalQtd: isLocalFechado ? 0 : itensDevolvidos.length,
-      totalPeso: isLocalFechado ? 0 : totalPesoDevolvido,
-      totalValor: isLocalFechado ? 0 : totalValorDevolucao,
+      totalQtd: isLocalFechado || isReentrega ? 0 : itensDevolvidos.length,
+      totalPeso: isLocalFechado || isReentrega ? 0 : totalPesoDevolvido,
+      totalValor: isLocalFechado || isReentrega ? 0 : totalValorDevolucao,
       valorNota: Number(nota.valor || 0),
       pesoNota: Number(nota.peso || nota.pesoLiquido || 0),
       cliente: nota.cliente,
@@ -754,6 +766,8 @@ export function Buscar() {
           valorNota: ocorrencia.valorNota,
           pesoNota: ocorrencia.pesoNota,
           dataRef: new Date().toISOString(),
+          motivo: ocorrencia.motivo,
+          status: "pendente",
         },
       ]);
 
@@ -1123,7 +1137,7 @@ export function Buscar() {
                       </Text>
                     </Box>
 
-                    {exigePeso && (
+                    {exigePeso && !isReentrega && (
                       <Box flex="1">
                         <Text fontSize="9px" color={COLORS.muted}>
                           PESO
@@ -1183,6 +1197,7 @@ export function Buscar() {
                     <option value="parcial">Devolução parcial</option>
 
                     <option value="total">Devolução total</option>
+                    <option value="reentrega">Reentrega</option>
                   </select>
                 </Box>
 
@@ -1193,7 +1208,9 @@ export function Buscar() {
                       ? COLORS.orangeSoft
                       : tipoOcorrencia === "quebra_peso"
                         ? COLORS.purpleSoft
-                        : COLORS.blueSoft
+                        : tipoOcorrencia === "reentrega"
+                          ? COLORS.greenSoft
+                          : COLORS.blueSoft
                   }
                   border="1px solid"
                   borderColor={
@@ -1201,7 +1218,9 @@ export function Buscar() {
                       ? "rgba(245,158,11,.18)"
                       : tipoOcorrencia === "quebra_peso"
                         ? "rgba(167,139,250,.18)"
-                        : "rgba(59,130,246,.18)"
+                        : tipoOcorrencia === "reentrega"
+                          ? "rgba(52,211,153,.18)"
+                          : "rgba(59,130,246,.18)"
                   }
                   borderRadius="6px"
                   alignSelf="end"
@@ -1226,7 +1245,9 @@ export function Buscar() {
                         ? COLORS.orange
                         : tipoOcorrencia === "quebra_peso"
                           ? COLORS.purple
-                          : COLORS.blue
+                          : tipoOcorrencia === "reentrega"
+                            ? COLORS.green
+                            : COLORS.blue
                     }
                   >
                     {getTipoLabel(tipoOcorrencia)}
@@ -1535,6 +1556,39 @@ export function Buscar() {
                 </Box>
               )}
 
+              {/* REENTREGA */}
+
+              {isReentrega && (
+                <Box
+                  mt="4px"
+                  px="14px"
+                  py="12px"
+                  bg={COLORS.greenSoft}
+                  border="1px solid"
+                  borderColor="rgba(52,211,153,.18)"
+                  borderRadius="6px"
+                >
+                  <Text
+                    fontSize="9px"
+                    fontWeight="700"
+                    letterSpacing=".08em"
+                    color={COLORS.green}
+                  >
+                    REENTREGA
+                  </Text>
+                  <Text
+                    fontSize="11px"
+                    color={COLORS.secondary}
+                    mt="4px"
+                    lineHeight="1.5"
+                  >
+                    Registre esta ocorrência quando a Nota Fiscal precisar de
+                    uma nova tentativa de entrega. Informe na observação os
+                    detalhes necessários para a próxima entrega.
+                  </Text>
+                </Box>
+              )}
+
               {/* OBSERVAÇÃO */}
 
               <Box mt="10px">
@@ -1553,9 +1607,11 @@ export function Buscar() {
                   placeholder={
                     tipoOcorrencia === "local_fechado"
                       ? "Ex.: cliente estava fechado no momento da entrega."
-                      : tipoOcorrencia === "quebra_peso"
-                        ? "Ex.: caixa recebida com 2 kg a menos que o peso informado na NF."
-                        : "Ex.: recusa por perda de vácuo."
+                      : tipoOcorrencia === "reentrega"
+                        ? "Ex.: reentregar após contato com o cliente. Nova tentativa combinada para amanhã."
+                        : tipoOcorrencia === "quebra_peso"
+                          ? "Ex.: caixa recebida com 2 kg a menos que o peso informado na NF."
+                          : "Ex.: recusa por perda de vácuo."
                   }
                   minH="48px"
                   maxH="58px"

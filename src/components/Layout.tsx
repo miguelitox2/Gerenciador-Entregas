@@ -19,6 +19,8 @@ import {
   PackageCheck,
   LogOut,
   ChevronRight,
+  RefreshCw,
+  FolderArchive,
 } from "lucide-react";
 
 /* =========================================================
@@ -76,6 +78,18 @@ const MENU_ITEMS = [
     path: "/retencao",
     label: "Retenção",
     icon: Truck,
+  },
+  {
+    section: "Operação",
+    path: "/reentregas",
+    label: "Reentregas",
+    icon: RefreshCw,
+  },
+  {
+    section: "Gestão",
+    path: "/canhotos",
+    label: "Canhotos",
+    icon: FolderArchive,
   },
   {
     section: "Gestão",

@@ -5,7 +5,9 @@ import { Buscar } from "../pages/Buscar";
 import { Ocorrencias } from "../pages/Ocorrencias";
 import { Retencao } from "../pages/Retencao";
 import { Importar } from "../pages/Importar";
+import Reentregas from "../pages/Reentregas";
 import Usuarios from "../pages/Usuarios";
+import Canhotos from "../pages/Canhotos";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   // Ajustado para ler a chave "token" salva pelo login do Fastify
@@ -28,6 +30,8 @@ export function AppRoutes() {
         <Route path="/buscar" element={<Buscar />} />
         <Route path="/ocorrencias" element={<Ocorrencias />} />
         <Route path="/retencao" element={<Retencao />} />
+        <Route path="/reentregas" element={<Reentregas />} />
+        <Route path="/canhotos" element={<Canhotos />} />
         <Route path="/importar" element={<Importar />} />
         <Route path="/usuarios" element={<Usuarios />} />
       </Route>
