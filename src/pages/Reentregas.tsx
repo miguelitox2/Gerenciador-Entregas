@@ -7,6 +7,8 @@ import {
   PackageCheck,
   RefreshCw,
   Search,
+  Truck,
+  Plus,
   User,
   X,
 } from "lucide-react";
@@ -48,6 +50,16 @@ interface Ocorrencia {
   criadoEm?: string | null;
   createdAt?: string | null;
   status?: string | null;
+  reentregaStatus?: string | null;
+  veiculoReentregaId?: string | null;
+  veiculoReentrega?: VeiculoReentrega | null;
+}
+
+interface VeiculoReentrega {
+  id: string;
+  placa: string;
+  ativo?: boolean;
+  criadoEm?: string | null;
 }
 
 type PeriodoPreset =
@@ -60,6 +72,7 @@ type PeriodoPreset =
   | "personalizado";
 
 type StatusFiltro = "todos" | "pendente" | "finalizado";
+type ProgramacaoFiltro = "todos" | "a_definir" | "programada" | "nao_vai";
 
 /* =========================================================
    CORES
@@ -201,6 +214,28 @@ function getStatus(ocorrencia: Ocorrencia): "pendente" | "finalizado" {
     : "pendente";
 }
 
+function getProgramacaoStatus(
+  ocorrencia: Ocorrencia,
+): "a_definir" | "programada" | "nao_vai" {
+  const status = normalizeSearch(ocorrencia.reentregaStatus);
+
+  if (status === "nao_vai") return "nao_vai";
+  if (status === "programada") return "programada";
+  if (ocorrencia.veiculoReentregaId || ocorrencia.veiculoReentrega?.id) {
+    return "programada";
+  }
+
+  return "a_definir";
+}
+
+function getProgramacaoLabel(ocorrencia: Ocorrencia) {
+  const status = getProgramacaoStatus(ocorrencia);
+
+  if (status === "programada") return "PROGRAMADA";
+  if (status === "nao_vai") return "NÃO VAI";
+  return "A DEFINIR";
+}
+
 function normalizeSearch(value?: string | null) {
   return String(value || "")
     .normalize("NFD")
@@ -220,6 +255,15 @@ export default function Reentregas() {
   const [busca, setBusca] = useState("");
   const [periodo, setPeriodo] = useState<PeriodoPreset>("mes");
   const [status, setStatus] = useState<StatusFiltro>("todos");
+  const [programacao, setProgramacao] = useState<ProgramacaoFiltro>("todos");
+  const [veiculos, setVeiculos] = useState<VeiculoReentrega[]>([]);
+  const [veiculoFiltro, setVeiculoFiltro] = useState("todos");
+  const [salvandoReentregaId, setSalvandoReentregaId] = useState<string | null>(
+    null,
+  );
+  const [modalVeiculoAberto, setModalVeiculoAberto] = useState(false);
+  const [novaPlaca, setNovaPlaca] = useState("");
+  const [salvandoVeiculo, setSalvandoVeiculo] = useState(false);
 
   const [dataInicial, setDataInicial] = useState(getMonthStart());
   const [dataFinal, setDataFinal] = useState(getMonthEnd());
@@ -268,8 +312,198 @@ export default function Reentregas() {
     }
   };
 
+  const carregarVeiculos = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/veiculos-reentrega`, {
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Não foi possível carregar os veículos de reentrega.",
+        );
+      }
+
+      const lista = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.veiculos)
+          ? data.veiculos
+          : [];
+
+      setVeiculos(
+        lista.filter((veiculo: VeiculoReentrega) => veiculo.ativo !== false),
+      );
+    } catch (error) {
+      console.error("Erro ao carregar veículos de reentrega:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível carregar os veículos.",
+      );
+    }
+  };
+
+  const cadastrarVeiculo = async () => {
+    const placa = novaPlaca.trim().toUpperCase();
+
+    if (!placa) {
+      toast.error("Informe a placa do veículo.");
+      return;
+    }
+
+    try {
+      setSalvandoVeiculo(true);
+
+      const response = await fetch(`${API_URL}/api/veiculos-reentrega`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ placa }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Não foi possível cadastrar o veículo.");
+      }
+
+      const novoVeiculo = data?.veiculo || data;
+
+      if (novoVeiculo?.id) {
+        setVeiculos((atual) => {
+          const semDuplicado = atual.filter(
+            (item) => item.id !== novoVeiculo.id,
+          );
+          return [...semDuplicado, novoVeiculo].sort((a, b) =>
+            a.placa.localeCompare(b.placa),
+          );
+        });
+      } else {
+        await carregarVeiculos();
+      }
+
+      setNovaPlaca("");
+      setModalVeiculoAberto(false);
+      toast.success("Veículo cadastrado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao cadastrar veículo:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível cadastrar o veículo.",
+      );
+    } finally {
+      setSalvandoVeiculo(false);
+    }
+  };
+
+  const atualizarProgramacao = async (
+    ocorrencia: Ocorrencia,
+    valor: string,
+  ) => {
+    const reentregaStatus: "a_definir" | "programada" | "nao_vai" =
+      valor === "nao_vai" ? "nao_vai" : valor ? "programada" : "a_definir";
+
+    const veiculoReentregaId = reentregaStatus === "programada" ? valor : null;
+
+    try {
+      setSalvandoReentregaId(ocorrencia.id);
+
+      const response = await fetch(
+        `${API_URL}/api/ocorrencias/${ocorrencia.id}/reentrega`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            reentregaStatus,
+            veiculoReentregaId,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Não foi possível atualizar a programação.",
+        );
+      }
+
+      const atualizada: Ocorrencia = data?.ocorrencia || data;
+
+      setOcorrencias((atual) =>
+        atual.map((item) =>
+          item.id === ocorrencia.id
+            ? {
+                ...item,
+                ...atualizada,
+                reentregaStatus,
+                veiculoReentregaId,
+                veiculoReentrega:
+                  reentregaStatus === "programada"
+                    ? veiculos.find(
+                        (veiculo) => veiculo.id === veiculoReentregaId,
+                      ) || null
+                    : null,
+              }
+            : item,
+        ),
+      );
+
+      setSelecionada((atual) =>
+        atual?.id === ocorrencia.id
+          ? {
+              ...atual,
+              ...atualizada,
+              reentregaStatus,
+              veiculoReentregaId,
+              veiculoReentrega:
+                reentregaStatus === "programada"
+                  ? veiculos.find(
+                      (veiculo) => veiculo.id === veiculoReentregaId,
+                    ) || null
+                  : null,
+            }
+          : atual,
+      );
+
+      if (reentregaStatus === "nao_vai") {
+        toast.success("Reentrega marcada como NÃO VAI.");
+      } else if (reentregaStatus === "programada") {
+        const veiculo = veiculos.find((item) => item.id === veiculoReentregaId);
+        toast.success(
+          `Reentrega programada para o veículo ${veiculo?.placa || "selecionado"}.`,
+        );
+      } else {
+        toast.success("Reentrega voltou para A DEFINIR.");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar programação:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar a programação.",
+      );
+    } finally {
+      setSalvandoReentregaId(null);
+    }
+  };
+
   useEffect(() => {
     carregarReentregas();
+    carregarVeiculos();
   }, []);
 
   /* =========================================================
@@ -365,6 +599,20 @@ export default function Reentregas() {
         return false;
       }
 
+      const statusProgramacao = getProgramacaoStatus(ocorrencia);
+
+      if (programacao !== "todos" && statusProgramacao !== programacao) {
+        return false;
+      }
+
+      if (veiculoFiltro !== "todos") {
+        if (veiculoFiltro === "sem_veiculo") {
+          if (statusProgramacao !== "a_definir") return false;
+        } else if (ocorrencia.veiculoReentregaId !== veiculoFiltro) {
+          return false;
+        }
+      }
+
       if (!termo) {
         return true;
       }
@@ -381,7 +629,16 @@ export default function Reentregas() {
 
       return valores.some((valor) => normalizeSearch(valor).includes(termo));
     });
-  }, [ocorrencias, busca, periodo, status, dataInicial, dataFinal]);
+  }, [
+    ocorrencias,
+    busca,
+    periodo,
+    status,
+    programacao,
+    veiculoFiltro,
+    dataInicial,
+    dataFinal,
+  ]);
 
   /* =========================================================
      INDICADORES
@@ -412,6 +669,8 @@ export default function Reentregas() {
   const limparFiltros = () => {
     setBusca("");
     setStatus("todos");
+    setProgramacao("todos");
+    setVeiculoFiltro("todos");
     setPeriodo("mes");
     setDataInicial(getMonthStart());
     setDataFinal(getMonthEnd());
@@ -482,7 +741,10 @@ export default function Reentregas() {
           variant="outline"
           borderColor={COLORS.borderHover}
           color={COLORS.secondary}
-          onClick={carregarReentregas}
+          onClick={() => {
+            carregarReentregas();
+            carregarVeiculos();
+          }}
           loading={loading}
           h="34px"
           px="13px"
@@ -625,7 +887,8 @@ export default function Reentregas() {
           display="grid"
           gridTemplateColumns={{
             base: "1fr",
-            md: "180px 1fr 1fr 1fr",
+            md: "180px repeat(3, 1fr)",
+            xl: "180px repeat(5, 1fr)",
           }}
           gap="9px"
         >
@@ -760,6 +1023,81 @@ export default function Reentregas() {
               <option value="finalizado">Finalizadas</option>
             </select>
           </Box>
+
+          {/* VEÍCULO */}
+
+          <Box>
+            <Text
+              fontSize="8px"
+              color={COLORS.muted}
+              fontWeight="700"
+              mb="5px"
+              letterSpacing=".05em"
+            >
+              VEÍCULO
+            </Text>
+
+            <select
+              value={veiculoFiltro}
+              onChange={(e) => setVeiculoFiltro(e.target.value)}
+              style={{
+                width: "100%",
+                height: "34px",
+                borderRadius: "6px",
+                border: `1px solid ${COLORS.borderHover}`,
+                background: COLORS.bg,
+                color: COLORS.text,
+                padding: "0 9px",
+                fontSize: "11px",
+                outline: "none",
+              }}
+            >
+              <option value="todos">Todos os veículos</option>
+              <option value="sem_veiculo">A definir</option>
+              {veiculos.map((veiculo) => (
+                <option key={veiculo.id} value={veiculo.id}>
+                  {veiculo.placa}
+                </option>
+              ))}
+            </select>
+          </Box>
+
+          {/* PROGRAMAÇÃO */}
+
+          <Box>
+            <Text
+              fontSize="8px"
+              color={COLORS.muted}
+              fontWeight="700"
+              mb="5px"
+              letterSpacing=".05em"
+            >
+              PROGRAMAÇÃO
+            </Text>
+
+            <select
+              value={programacao}
+              onChange={(e) =>
+                setProgramacao(e.target.value as ProgramacaoFiltro)
+              }
+              style={{
+                width: "100%",
+                height: "34px",
+                borderRadius: "6px",
+                border: `1px solid ${COLORS.borderHover}`,
+                background: COLORS.bg,
+                color: COLORS.text,
+                padding: "0 9px",
+                fontSize: "11px",
+                outline: "none",
+              }}
+            >
+              <option value="todos">Todas</option>
+              <option value="a_definir">A definir</option>
+              <option value="programada">Programadas</option>
+              <option value="nao_vai">Não vai</option>
+            </select>
+          </Box>
         </Box>
 
         {/* BUSCA */}
@@ -853,18 +1191,42 @@ export default function Reentregas() {
               </Text>
             </Box>
 
-            {(busca || status !== "todos" || periodo !== "mes") && (
-              <Badge
-                bg={COLORS.blueSoft}
-                color={COLORS.blue}
-                borderRadius="4px"
-                px="7px"
-                py="4px"
-                fontSize="8px"
+            <HStack gap="8px">
+              {(busca ||
+                status !== "todos" ||
+                periodo !== "mes" ||
+                programacao !== "todos" ||
+                veiculoFiltro !== "todos") && (
+                <Badge
+                  bg={COLORS.blueSoft}
+                  color={COLORS.blue}
+                  borderRadius="4px"
+                  px="7px"
+                  py="4px"
+                  fontSize="8px"
+                >
+                  FILTROS ATIVOS
+                </Badge>
+              )}
+
+              <Button
+                h="28px"
+                px="9px"
+                fontSize="10px"
+                variant="outline"
+                borderColor={COLORS.borderHover}
+                color={COLORS.secondary}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNovaPlaca("");
+                  setModalVeiculoAberto(true);
+                }}
+                _hover={{ bg: COLORS.cardHover, color: COLORS.text }}
               >
-                FILTROS ATIVOS
-              </Badge>
-            )}
+                <Plus size={12} />
+                Adicionar veículo
+              </Button>
+            </HStack>
           </Flex>
         </Box>
 
@@ -913,7 +1275,7 @@ export default function Reentregas() {
             <Box minW="900px">
               <Box
                 display="grid"
-                gridTemplateColumns="130px minmax(220px, 1fr) 180px 130px 120px 40px"
+                gridTemplateColumns="130px minmax(220px, 1fr) 160px 120px 220px 130px 40px"
                 gap="12px"
                 px="18px"
                 py="8px"
@@ -929,6 +1291,7 @@ export default function Reentregas() {
                 <Text>CLIENTE</Text>
                 <Text>VENDEDOR</Text>
                 <Text>DATA</Text>
+                <Text>VEÍCULO / PROGRAMAÇÃO</Text>
                 <Text>STATUS</Text>
                 <Text />
               </Box>
@@ -940,7 +1303,7 @@ export default function Reentregas() {
                   <Box
                     key={ocorrencia.id}
                     display="grid"
-                    gridTemplateColumns="130px minmax(220px, 1fr) 180px 130px 120px 40px"
+                    gridTemplateColumns="130px minmax(220px, 1fr) 160px 120px 220px 130px 40px"
                     gap="12px"
                     alignItems="center"
                     px="18px"
@@ -990,6 +1353,55 @@ export default function Reentregas() {
                       {formatDate(getOccurrenceDate(ocorrencia))}
                     </Text>
 
+                    <Box onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={
+                          getProgramacaoStatus(ocorrencia) === "nao_vai"
+                            ? "nao_vai"
+                            : ocorrencia.veiculoReentregaId || ""
+                        }
+                        disabled={salvandoReentregaId === ocorrencia.id}
+                        onChange={(e) =>
+                          atualizarProgramacao(ocorrencia, e.target.value)
+                        }
+                        style={{
+                          width: "100%",
+                          height: "34px",
+                          borderRadius: "5px",
+                          border: `1px solid ${COLORS.borderHover}`,
+                          background: COLORS.bg,
+                          color: COLORS.text,
+                          padding: "0 8px",
+                          fontSize: "10px",
+                          outline: "none",
+                          opacity:
+                            salvandoReentregaId === ocorrencia.id ? 0.6 : 1,
+                        }}
+                      >
+                        <option value="">A DEFINIR</option>
+                        {veiculos.map((veiculo) => (
+                          <option key={veiculo.id} value={veiculo.id}>
+                            {veiculo.placa}
+                          </option>
+                        ))}
+                        <option value="nao_vai">NÃO VAI</option>
+                      </select>
+                      <Text
+                        mt="4px"
+                        fontSize="8px"
+                        fontWeight="700"
+                        color={
+                          getProgramacaoStatus(ocorrencia) === "programada"
+                            ? COLORS.blue
+                            : getProgramacaoStatus(ocorrencia) === "nao_vai"
+                              ? COLORS.danger
+                              : COLORS.muted
+                        }
+                      >
+                        {getProgramacaoLabel(ocorrencia)}
+                      </Text>
+                    </Box>
+
                     <Badge
                       w="fit-content"
                       bg={pendente ? COLORS.greenSoft : COLORS.blueSoft}
@@ -1013,6 +1425,129 @@ export default function Reentregas() {
           </Box>
         )}
       </Box>
+
+      {/* MODAL CADASTRO DE VEÍCULO */}
+
+      {modalVeiculoAberto && (
+        <Box
+          position="fixed"
+          inset="0"
+          zIndex={1100}
+          bg="rgba(0,0,0,.72)"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p="18px"
+          onClick={() => setModalVeiculoAberto(false)}
+        >
+          <Box
+            w="100%"
+            maxW="420px"
+            bg={COLORS.card}
+            border="1px solid"
+            borderColor={COLORS.borderHover}
+            borderRadius="10px"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Flex
+              px="18px"
+              py="14px"
+              align="center"
+              justify="space-between"
+              borderBottom="1px solid"
+              borderColor={COLORS.border}
+            >
+              <Box>
+                <HStack gap="8px">
+                  <Truck size={16} color={COLORS.blue} />
+                  <Heading fontSize="15px" fontWeight="650">
+                    Adicionar veículo
+                  </Heading>
+                </HStack>
+                <Text fontSize="10px" color={COLORS.secondary} mt="3px">
+                  Cadastre uma placa para programar as reentregas.
+                </Text>
+              </Box>
+              <Button
+                variant="ghost"
+                minW="32px"
+                w="32px"
+                h="32px"
+                p="0"
+                color={COLORS.secondary}
+                onClick={() => setModalVeiculoAberto(false)}
+              >
+                <X size={17} />
+              </Button>
+            </Flex>
+
+            <Box p="18px">
+              <Text
+                fontSize="8px"
+                color={COLORS.muted}
+                fontWeight="700"
+                mb="6px"
+                letterSpacing=".05em"
+              >
+                PLACA
+              </Text>
+              <Input
+                value={novaPlaca}
+                onChange={(e) => setNovaPlaca(e.target.value.toUpperCase())}
+                placeholder="ABC1D23"
+                h="38px"
+                bg={COLORS.bg}
+                borderColor={COLORS.borderHover}
+                color={COLORS.text}
+                fontSize="12px"
+                textTransform="uppercase"
+                maxLength={8}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") cadastrarVeiculo();
+                }}
+                _focus={{
+                  borderColor: COLORS.blue,
+                  boxShadow: `0 0 0 1px ${COLORS.blue}`,
+                }}
+              />
+            </Box>
+
+            <Flex
+              px="18px"
+              py="12px"
+              justify="flex-end"
+              gap="8px"
+              borderTop="1px solid"
+              borderColor={COLORS.border}
+            >
+              <Button
+                variant="ghost"
+                h="34px"
+                px="12px"
+                fontSize="10px"
+                color={COLORS.secondary}
+                onClick={() => setModalVeiculoAberto(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                h="34px"
+                px="14px"
+                fontSize="10px"
+                bg={COLORS.blue}
+                color="white"
+                loading={salvandoVeiculo}
+                onClick={cadastrarVeiculo}
+                _hover={{ bg: COLORS.blueHover }}
+              >
+                <Plus size={13} />
+                Cadastrar veículo
+              </Button>
+            </Flex>
+          </Box>
+        </Box>
+      )}
 
       {/* MODAL */}
 
@@ -1238,6 +1773,70 @@ export default function Reentregas() {
                     </Text>
                   </Box>
                 )}
+              </Box>
+
+              {/* PROGRAMAÇÃO */}
+
+              <Box mt="12px">
+                <HStack gap="7px" mb="5px">
+                  <Truck size={13} color={COLORS.blue} />
+                  <Text
+                    fontSize="9px"
+                    color={COLORS.secondary}
+                    fontWeight="700"
+                    letterSpacing=".06em"
+                  >
+                    PROGRAMAÇÃO DA REENTREGA
+                  </Text>
+                </HStack>
+
+                <Box
+                  p="12px"
+                  bg={COLORS.bg}
+                  border="1px solid"
+                  borderColor={COLORS.border}
+                  borderRadius="6px"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Text
+                    fontSize="8px"
+                    color={COLORS.muted}
+                    fontWeight="700"
+                    mb="6px"
+                  >
+                    VEÍCULO
+                  </Text>
+                  <select
+                    value={
+                      getProgramacaoStatus(selecionada) === "nao_vai"
+                        ? "nao_vai"
+                        : selecionada.veiculoReentregaId || ""
+                    }
+                    disabled={salvandoReentregaId === selecionada.id}
+                    onChange={(e) =>
+                      atualizarProgramacao(selecionada, e.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      height: "36px",
+                      borderRadius: "6px",
+                      border: `1px solid ${COLORS.borderHover}`,
+                      background: COLORS.card,
+                      color: COLORS.text,
+                      padding: "0 9px",
+                      fontSize: "11px",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="">A DEFINIR</option>
+                    {veiculos.map((veiculo) => (
+                      <option key={veiculo.id} value={veiculo.id}>
+                        {veiculo.placa}
+                      </option>
+                    ))}
+                    <option value="nao_vai">NÃO VAI</option>
+                  </select>
+                </Box>
               </Box>
 
               {/* OBSERVAÇÃO */}
